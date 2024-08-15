@@ -1,0 +1,200 @@
+-- 創建資料庫
+CREATE DATABASE IF NOT EXISTS SSD;
+
+-- 選擇資料庫
+USE SSD;
+
+
+-- 創建 User 表
+CREATE TABLE IF NOT EXISTS User (
+    UserID INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    UserName VARCHAR(50) NOT NULL,
+    Email VARCHAR(100) NOT NULL,
+    Password VARCHAR(255) NOT NULL,
+    FirstName VARCHAR(50),
+    LastName VARCHAR(50),
+    Gender ENUM('Male', 'Female', 'Other'),
+    PhotoUrl VARCHAR(255),
+    InstantPostureAlertEnable BOOLEAN DEFAULT FALSE,
+	PostureAlertDelayTime TIME,
+    IdleAlertEnable BOOLEAN DEFAULT FALSE,
+    IdleAlertDelayTime TIME,
+    AverageScore FLOAT,
+    TotalTime TIME,
+    Level INT,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE (UserName, Email)
+);
+
+-- 創建 Friends 表
+CREATE TABLE IF NOT EXISTS FriendList (
+    FriendID INT PRIMARY KEY AUTO_INCREMENT,
+    UserID1 INT NOT NULL,
+    UserID2 INT NOT NULL,
+    Status ENUM('Pending', 'Accepted', 'Blocked') DEFAULT 'Pending',
+    RequestDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID1) REFERENCES User(UserID),
+    FOREIGN KEY (UserID2) REFERENCES User(UserID),
+    UNIQUE (UserID1, UserID2)
+);
+
+-- 創建 FriendRequests 表
+CREATE TABLE IF NOT EXISTS FriendRequest (
+    RequestID INT PRIMARY KEY AUTO_INCREMENT,
+    SenderID INT NOT NULL,
+    ReceiverID INT NOT NULL,
+    RequestDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    Status ENUM('Pending', 'Accepted', 'Declined') DEFAULT 'Pending',
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (SenderID) REFERENCES User(UserID),
+    FOREIGN KEY (ReceiverID) REFERENCES User(UserID),
+    UNIQUE (SenderID, ReceiverID)
+);
+
+-- 創建 BlockedList 表
+CREATE TABLE IF NOT EXISTS BlockedList (
+    BlockID INT PRIMARY KEY AUTO_INCREMENT,
+    BlockerID INT NOT NULL,
+    BlockedID INT NOT NULL,
+    BlockDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (BlockerID) REFERENCES User(UserID),
+    FOREIGN KEY (BlockedID) REFERENCES User(UserID),
+    UNIQUE (BlockerID, BlockedID)
+);
+
+
+
+-- 以下確保資料正確性
+-- 確保不能自己加自己為好友
+DELIMITER //
+CREATE TRIGGER prevent_self_friend_request BEFORE INSERT ON FriendRequest
+FOR EACH ROW
+BEGIN
+    IF NEW.SenderID = NEW.ReceiverID THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Cannot send friend request to yourself';
+    END IF;
+END;
+//
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER prevent_self_friend BEFORE INSERT ON FriendList
+FOR EACH ROW
+BEGIN
+    IF NEW.UserID1 = NEW.UserID2 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Cannot add yourself as a friend';
+    END IF;
+END;
+//
+DELIMITER ;DELIMITER ;
+
+
+-- 確保不能自己封鎖自己
+DELIMITER //
+CREATE TRIGGER prevent_self_block BEFORE INSERT ON BlockedList
+FOR EACH ROW
+BEGIN
+    IF NEW.BlockerID = NEW.BlockedID THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Cannot block yourself';
+    END IF;
+END;
+//           
+  
+-- 確保接受好友請求後在 Friends 表中加入記錄
+DELIMITER //
+CREATE TRIGGER auto_add_friend AFTER UPDATE ON FriendRequest
+FOR EACH ROW
+BEGIN
+    IF NEW.Status = 'Accepted' THEN
+        INSERT INTO FriendList (UserID1, UserID2, Status) VALUES (NEW.SenderID, NEW.ReceiverID, 'Accepted');
+        INSERT INTO FriendList (UserID1, UserID2, Status) VALUES (NEW.ReceiverID, NEW.SenderID, 'Accepted');
+    END IF;
+END;
+//
+DELIMITER ;
+
+-- 確保封鎖好友後從 FriendList 表中移除記錄
+DELIMITER //
+CREATE TRIGGER auto_remove_friend AFTER INSERT ON BlockedList
+FOR EACH ROW
+BEGIN
+    DELETE FROM FriendList WHERE (UserID1 = NEW.BlockerID AND UserID2 = NEW.BlockedID) OR (UserID1 = NEW.BlockedID AND UserID2 = NEW.BlockerID);
+END;
+//
+DELIMITER ;
+
+/* ===== 建立偵測紀錄的TABLE ===== */
+
+-- 創建 Record 表
+CREATE TABLE IF NOT EXISTS Record (
+    RecordID INT PRIMARY KEY AUTO_INCREMENT,
+    UserID INT NOT NULL,
+    StartTime TIMESTAMP NOT NULL,
+    EndTime TIMESTAMP NOT NULL,
+    TotalTime TIME NOT NULL,
+    TotalPredictions INT NOT NULL,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID) REFERENCES User(UserID)
+);
+
+-- 創建 Body 表
+CREATE TABLE IF NOT EXISTS Body (
+    RecordID INT PRIMARY KEY,
+    BackwardCount INT DEFAULT 0,
+    ForwardCount INT DEFAULT 0,
+    NeutralCount INT DEFAULT 0,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
+);
+
+-- 創建 Feet 表
+CREATE TABLE IF NOT EXISTS Feet (
+    RecordID INT PRIMARY KEY,
+    AnkleOnKneeCount INT DEFAULT 0,
+    FlatCount INT DEFAULT 0,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
+);
+
+-- 創建 Head 表
+CREATE TABLE IF NOT EXISTS Head (
+    RecordID INT PRIMARY KEY,
+    BowedCount INT DEFAULT 0,
+    NeutralCount INT DEFAULT 0,
+    TiltBackCount INT DEFAULT 0,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
+);
+
+-- 創建 Shoulder 表
+CREATE TABLE IF NOT EXISTS Shoulder (
+    RecordID INT PRIMARY KEY,
+    HunchedCount INT DEFAULT 0,
+    NeutralCount INT DEFAULT 0,
+    ShrugCount INT DEFAULT 0,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
+);
+
+-- 創建 Neck 表
+CREATE TABLE IF NOT EXISTS Neck (
+    RecordID INT PRIMARY KEY,
+    ForwardCount INT DEFAULT 0,
+    NeutralCount INT DEFAULT 0,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
+);
+
+
