@@ -6,7 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models import Base
 from app.config import DATABASE_URL
-from app.api import auth
+from app.api import auth, users, friends, friend_requests, blocked_list, records
+import uvicorn
 
 # 初始化 FastAPI 應用
 app = FastAPI()
@@ -26,11 +27,13 @@ def get_db():
     finally:
         db.close()
 
-# 載入 API 路由
-from app.api import friends, friend_requests, blocked_list, user
 
-app.include_router(user.router, prefix="/users", tags=["users"])
+app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(friends.router, prefix="/friends", tags=["friends"])
 app.include_router(friend_requests.router, prefix="/friend-requests", tags=["friend_requests"])
 app.include_router(blocked_list.router, prefix="/blocked-list", tags=["blocked_list"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(records.router, prefix="/records", tags=["records"])
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

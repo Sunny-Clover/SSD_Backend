@@ -35,6 +35,6 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     return SuccessMessage(message="用戶註冊成功")
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/", response_model=UserResponse)
 def read_users_me(current_user: Annotated[UserResponse, Depends(get_current_user)]):
     return current_user

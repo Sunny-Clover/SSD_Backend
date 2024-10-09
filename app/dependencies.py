@@ -10,8 +10,10 @@ from app.schemas import UserResponse
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)):
+    print("Debug token:", token)
     payload = decode_token(token)
     if payload is None:
+        print("No payload")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="無效的認證憑證",
@@ -19,14 +21,15 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
         )
     username: str = payload.get("sub")
     if username is None:
+        print("No username")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="無效的認證憑證",
             headers={"WWW-Authenticate": "Bearer"},
         )
     user = db.query(User).filter(User.UserName == username).first()
-    print("Debug user:", user)
     if user is None:
+        print("No user")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用戶不存在",
