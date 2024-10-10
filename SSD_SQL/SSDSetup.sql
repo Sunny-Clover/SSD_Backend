@@ -1,9 +1,8 @@
--- 創建資料庫
-CREATE DATABASE IF NOT EXISTS SSD;
+-- -- 創建資料庫
+-- CREATE DATABASE IF NOT EXISTS SSD;
 
--- 選擇資料庫
-USE SSD;
-
+-- -- 選擇資料庫
+-- USE SSD;
 
 -- 創建 User 表
 CREATE TABLE IF NOT EXISTS User (
@@ -68,10 +67,6 @@ CREATE TABLE IF NOT EXISTS BlockedList (
     UNIQUE (BlockerID, BlockedID)
 );
 
-
-
--- 以下確保資料正確性
--- 確保不能自己加自己為好友
 DELIMITER //
 CREATE TRIGGER prevent_self_friend_request BEFORE INSERT ON FriendRequest
 FOR EACH ROW
@@ -92,7 +87,7 @@ BEGIN
     END IF;
 END;
 //
-DELIMITER ;DELIMITER ;
+DELIMITER ;
 
 
 -- 確保不能自己封鎖自己
@@ -105,7 +100,8 @@ BEGIN
     END IF;
 END;
 //           
-  
+DELIMITER ;
+
 -- 確保接受好友請求後在 Friends 表中加入記錄
 DELIMITER //
 CREATE TRIGGER auto_add_friend AFTER UPDATE ON FriendRequest
@@ -129,7 +125,6 @@ END;
 //
 DELIMITER ;
 
-/* ===== 建立偵測紀錄的TABLE ===== */
 
 -- 創建 Record 表
 CREATE TABLE IF NOT EXISTS Record (
@@ -196,5 +191,3 @@ CREATE TABLE IF NOT EXISTS Neck (
     ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
 );
-
-

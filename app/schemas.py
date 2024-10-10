@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 # for API 請求的請求體或回應的數據格式
 
@@ -14,16 +15,16 @@ class UserResponse(BaseModel):
     UserID: int
     UserName: str
     Email: EmailStr
-    FirstName: str | None = None
-    LastName: str | None = None
-    Gender: str | None = None
-    PhotoUrl: str | None = None
+    FirstName: Optional[str] = None
+    LastName: Optional[str] = None
+    Gender: Optional[str] = None
+    PhotoUrl: Optional[str] = None
     InstantPostureAlertEnable: bool = False
-    PostureAlertDelayTime: str | None = None
+    PostureAlertDelayTime: Optional[str] = None
     IdleAlertEnable: bool = False
-    IdleAlertDelayTime: str | None = None
-    AverageScore: float | None = None
-    TotalTime: str | None = None
+    IdleAlertDelayTime: Optional[str] = None
+    AverageScore: Optional[float] = None
+    TotalTime: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -64,12 +65,14 @@ class BodyCreate(BaseModel):
     NeutralCount: int = 0
     class Config:
         orm_mode = True
+        from_attributes = True
 
 class FeetCreate(BaseModel):
     AnkleOnKneeCount: int = 0
     FlatCount: int = 0
     class Config:
         orm_mode = True
+        from_attributes = True
 
 class HeadCreate(BaseModel):
     BowedCount: int = 0
@@ -77,6 +80,7 @@ class HeadCreate(BaseModel):
     TiltBackCount: int = 0
     class Config:
         orm_mode = True
+        from_attributes = True
         
 class ShoulderCreate(BaseModel):
     HunchedCount: int = 0
@@ -84,12 +88,14 @@ class ShoulderCreate(BaseModel):
     ShrugCount: int = 0
     class Config:
         orm_mode = True
+        from_attributes = True
 
 class NeckCreate(BaseModel):
     ForwardCount: int = 0
     NeutralCount: int = 0
     class Config:
         orm_mode = True
+        from_attributes = True
 
 # Records api 的請求體或回應的數據格式
 class RecordCreate(BaseModel):
