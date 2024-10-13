@@ -1,9 +1,3 @@
--- -- 創建資料庫
--- CREATE DATABASE IF NOT EXISTS SSD;
-
--- -- 選擇資料庫
--- USE SSD;
-
 -- 創建 User 表
 CREATE TABLE IF NOT EXISTS User (
     UserID INT NOT NULL PRIMARY KEY AUTO_INCREMENT,

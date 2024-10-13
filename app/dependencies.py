@@ -9,7 +9,7 @@ from app.schemas import UserResponse
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)):
+def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)):
     print("Debug token:", token)
     payload = decode_token(token)
     if payload is None:
@@ -40,3 +40,5 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
         UserName=user.UserName,
         Email=user.Email,
     )
+
+CurrentUser = Annotated[User, Depends(get_current_user)]

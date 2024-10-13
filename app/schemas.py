@@ -29,6 +29,19 @@ class UserResponse(BaseModel):
     class Config:
         orm_mode = True
 
+class UserUpdate(BaseModel):
+    Email: Optional[EmailStr] = None 
+    FirstName: Optional[str] = None
+    LastName: Optional[str] = None
+    Gender: Optional[str] = None
+    PhotoUrl: Optional[str] = None
+    InstantPostureAlertEnable: bool = False
+    PostureAlertDelayTime: Optional[str] = None
+    IdleAlertEnable: bool = False
+    IdleAlertDelayTime: Optional[str] = None
+    AverageScore: Optional[float] = None
+    TotalTime: Optional[str] = None
+
 ## 好友請求
 class FriendRequestCreate(BaseModel):
     ReceiverID: int
