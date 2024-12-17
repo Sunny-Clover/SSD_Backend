@@ -38,15 +38,15 @@ class UserBase(SQLModel):
     TotalDetectionTime: Optional[time] = Field(default='00:00:00')
 
 class User(UserBase, TimestampMixin, table=True):
-    UserID: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    UserID: int = Field(default=None, primary_key=True)
     Password: str = Field(max_length=255, nullable=False)
 
 
 # FriendList 表
 class FriendList(TimestampMixin, table=True):
     FriendID: Optional[int] = Field(default=None, primary_key=True)
-    UserID1: uuid.UUID = Field(nullable=False)
-    UserID2: uuid.UUID = Field(nullable=False)
+    UserID1: int = Field(nullable=False)
+    UserID2: int = Field(nullable=False)
 
     __table_args__ = (
         UniqueConstraint("UserID1", "UserID2"),  # 使用 UniqueConstraint 來定義組合唯一約束
@@ -58,8 +58,8 @@ class FriendList(TimestampMixin, table=True):
 # FriendRequest 表
 class FriendRequest(TimestampMixin, table=True):
     RequestID: Optional[int] = Field(default=None, primary_key=True)
-    SenderID: uuid.UUID = Field(nullable=False)
-    ReceiverID: uuid.UUID = Field(nullable=False)
+    SenderID: int = Field(nullable=False)
+    ReceiverID: int = Field(nullable=False)
     Status: Optional[StatusEnum] = Field(default="Pending")
     RequestDate: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
@@ -73,8 +73,8 @@ class FriendRequest(TimestampMixin, table=True):
 # BlockList 表
 class BlockList(TimestampMixin, table=True):
     BlockID: Optional[int] = Field(default=None, primary_key=True)
-    BlockerID: uuid.UUID = Field(nullable=False)
-    BlockedID: uuid.UUID = Field(nullable=False)
+    BlockerID: int = Field(nullable=False)
+    BlockedID: int = Field(nullable=False)
     BlockDate: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
     __table_args__ = (
@@ -87,7 +87,7 @@ class BlockList(TimestampMixin, table=True):
 # Detection 表
 class Detection(TimestampMixin, table=True):
     DetectionID: Optional[int] = Field(default=None, primary_key=True)
-    UserID: uuid.UUID = Field(nullable=False)
+    UserID: int = Field(nullable=False)
     StartTime: datetime = Field(nullable=False)
     EndTime: datetime = Field(nullable=False)
     TotalTime: time = Field(nullable=False)

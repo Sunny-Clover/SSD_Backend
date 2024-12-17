@@ -2,8 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.models import Detection, Torso, Feet, Head, Shoulder, Neck
 from app.schemas import UserResponse, DetectionCreate, DetectionResponse, TorsoCreate, FeetCreate, HeadCreate, ShoulderCreate, NeckCreate
-from app.core.database import get_db
-from app.dependencies import get_current_user
+from app.api.deps import CurrentUser, SessionDep
 from typing import List, Annotated
 
 router = APIRouter()
@@ -11,8 +10,8 @@ router = APIRouter()
 @router.post("/", response_model=DetectionResponse)
 async def create_Detection(
     Detection: DetectionCreate,
-    current_user: Annotated[UserResponse, Depends(get_current_user)],
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: SessionDep
 ):
     new_Detection = Detection(
         UserID=current_user.UserID,
@@ -59,8 +58,8 @@ async def create_Detection(
 
 @router.get("/", response_model=List[DetectionResponse])
 async def get_Detections(
-    current_user: Annotated[UserResponse, Depends(get_current_user)],
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: SessionDep
 ):
     Detections = db.query(Detection).filter(Detection.UserID == current_user.UserID).all()
     responses = []
@@ -88,8 +87,8 @@ async def get_Detections(
 @router.get("/{Detection_id}", response_model=DetectionResponse)
 async def get_Detection(
     Detection_id: int,
-    current_user: Annotated[UserResponse, Depends(get_current_user)],
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: SessionDep
 ):
     Detection = db.query(Detection).filter(Detection.DetectionID == Detection_id, Detection.UserID == current_user.UserID).first()
     if not Detection:
@@ -120,8 +119,8 @@ async def get_Detection(
 async def update_Detection(
     Detection_id: int,
     Detection: DetectionCreate,
-    current_user: Annotated[UserResponse, Depends(get_current_user)],
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: SessionDep
 ):
     db_Detection = db.query(Detection).filter(Detection.DetectionID == Detection_id, Detection.UserID == current_user.UserID).first()
     if not db_Detection:
@@ -165,8 +164,8 @@ async def update_Detection(
 @router.delete("/{Detection_id}", response_model=dict)
 async def delete_Detection(
     Detection_id: int,
-    current_user: Annotated[UserResponse, Depends(get_current_user)],
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: SessionDep
 ):
     db_Detection = db.query(Detection).filter(Detection.DetectionID == Detection_id, Detection.UserID == current_user.UserID).first()
     if not db_Detection:

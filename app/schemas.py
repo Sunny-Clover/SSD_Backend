@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 from typing import Optional
 
 # for API 請求的請求體或回應的數據格式
@@ -23,24 +23,36 @@ class UserResponse(BaseModel):
     PostureAlertTime: Optional[str] = None
     IdleAlertEnable: bool = False
     IdleAlertTime: Optional[str] = None
-    AverageScore: Optional[float] = None
-    TotalTime: Optional[str] = None
+    AllTimeScore: Optional[float] = None
+    TotalDetectionTime: Optional[str] = None
 
     class Config:
         from_attributes = True
-
+'''
+使用者可以修改的使用者資訊
+'''
 class UserUpdate(BaseModel):
     Email: Optional[EmailStr] = None 
     FirstName: Optional[str] = None
     LastName: Optional[str] = None
     Gender: Optional[str] = None
     PhotoUrl: Optional[str] = None
-    InstantPostureAlertEnable: bool = False
-    PostureAlertDelayTime: Optional[str] = None
-    IdleAlertEnable: bool = False
-    IdleAlertDelayTime: Optional[str] = None
-    AverageScore: Optional[float] = None
-    TotalTime: Optional[str] = None
+    PostureAlertEnable: Optional[bool] = None
+    PostureAlertTime: Optional[str] = None
+    IdleAlertEnable: Optional[bool] = None
+    IdleAlertTime: Optional[str] = None
+
+class PasswordUpdate(BaseModel):
+    current_password: str  
+    new_password: str      
+    confirm_password: str
+
+    @validator('confirm_password')
+    def check_passwords_match(cls, v, values):
+        if 'new_password' in values and v != values['new_password']:
+            raise ValueError('New password and confirm password do not match')
+        return v
+
 
 ## 好友請求
 class FriendRequestCreate(BaseModel):
