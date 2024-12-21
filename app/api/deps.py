@@ -23,7 +23,6 @@ TokenDep = Annotated[str, Depends(oauth2_scheme)]
 
 
 def get_current_user(token: TokenDep, db: SessionDep):
-    print("Debug token:", token)
     payload = decode_token(token)
     if payload is None:
         print("No payload")
@@ -48,11 +47,7 @@ def get_current_user(token: TokenDep, db: SessionDep):
             detail="用戶不存在",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return UserResponse(
-        UserID=user.UserID,
-        UserName=user.UserName,
-        Email=user.Email,
-    )
+    return user
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 

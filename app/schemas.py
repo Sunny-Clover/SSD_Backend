@@ -1,62 +1,71 @@
 from pydantic import BaseModel, EmailStr, validator
-from typing import Optional
+from typing import Optional, List
+from datetime import time, datetime
+from .models import GenderEnum, StatusEnum
 
-# for API 請求的請求體或回應的數據格式
 
-class SuccessMessage(BaseModel):
-    message: str
+# 基底模型：用於共享欄位
+class UserUpdatable(BaseModel):
+    FirstName: Optional[str] = None
+    LastName: Optional[str] = None
+    Gender: Optional[GenderEnum] = None
+    PhotoUrl: Optional[str] = None
+    PostureAlertEnable: Optional[bool] = None
+    PostureAlertTime: Optional[time] = None
+    IdleAlertEnable: Optional[bool] = None
+    IdleAlertTime: Optional[time] = None
 
-class UserCreate(BaseModel):
+class UserRegister(UserUpdatable):
     Email: EmailStr
     UserName: str
     Password: str
 
-class UserResponse(BaseModel):
+    @validator('Password')
+    def password_length(cls, v):
+        if len(v) < 8 or len(v) > 40:
+            raise ValueError('Password must be between 8 and 40 characters')
+        return v
+
+class UserUpdate(UserUpdatable):
+    pass
+
+# 用於返回用戶資訊的模型
+class UserResponse(UserUpdatable):
     UserID: int
+    Email: Optional[EmailStr] = None
     UserName: str
-    Email: EmailStr
-    FirstName: Optional[str] = None
-    LastName: Optional[str] = None
-    Gender: Optional[str] = None
-    PhotoUrl: Optional[str] = None
-    PostureAlertEnable: bool = False
-    PostureAlertTime: Optional[str] = None
-    IdleAlertEnable: bool = False
-    IdleAlertTime: Optional[str] = None
-    AllTimeScore: Optional[float] = None
-    TotalDetectionTime: Optional[str] = None
 
     class Config:
         from_attributes = True
-'''
-使用者可以修改的使用者資訊
-'''
-class UserUpdate(BaseModel):
-    Email: Optional[EmailStr] = None 
-    FirstName: Optional[str] = None
-    LastName: Optional[str] = None
-    Gender: Optional[str] = None
-    PhotoUrl: Optional[str] = None
-    PostureAlertEnable: Optional[bool] = None
-    PostureAlertTime: Optional[str] = None
-    IdleAlertEnable: Optional[bool] = None
-    IdleAlertTime: Optional[str] = None
 
+# ==========以下還沒處理==========
+# 密碼更新模型
 class PasswordUpdate(BaseModel):
-    current_password: str  
-    new_password: str      
+    current_password: str
+    new_password: str
     confirm_password: str
 
     @validator('confirm_password')
-    def check_passwords_match(cls, v, values):
+    def passwords_match(cls, v, values):
         if 'new_password' in values and v != values['new_password']:
             raise ValueError('New password and confirm password do not match')
         return v
+    @validator('new_password')
+    def password_length(cls, v):
+        if not (8 <= len(v) <= 40):
+            raise ValueError('Password must be between 8 and 40 characters')
+        return v
 
 
-## 好友請求
-class FriendRequestCreate(BaseModel):
+
+# 好友請求相關模型
+class FriendRequestBase(BaseModel):
     ReceiverID: int
+
+
+class FriendRequestCreate(FriendRequestBase):
+    pass
+
 
 class FriendRequestResponse(BaseModel):
     RequestID: int
@@ -64,84 +73,130 @@ class FriendRequestResponse(BaseModel):
     SenderUserName: str
     ReceiverID: int
     ReceiverUserName: str
-    Status: str
-    RequestDate: str
+    Status: StatusEnum
+    RequestDate: datetime
 
     class Config:
         from_attributes = True
 
-class FriendRequestAction(BaseModel):
-    Action: str  # 'accept' 或 'decline'
 
+class FriendRequestAction(BaseModel):
+    Action: StatusEnum  # 'Pending', 'Accepted', 'Declined'
+
+
+# 好友列表相關模型
+class FriendListResponse(BaseModel):
+    FriendID: int
+    UserID1: int
+    User1UserName: str
+    UserID2: int
+    User2UserName: str
+    CreateDate: datetime
+    ModDate: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# 認證相關模型
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
-    token_type: str
+    token_type: str = "bearer"
+
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 
+class TokenPayload(BaseModel):
+    sub: Optional[str] = None
 
-# 部位紀錄的請求體或回應的數據格式
-class TorsoCreate(BaseModel):
+
+# 身體部位紀錄的基底模型
+class BodyPartBase(BaseModel):
+    PredictionCount: Optional[int] = 0
+    PartialScore: Optional[float] = 0.0
+
+
+class TorsoCreate(BodyPartBase):
     BackwardCount: int = 0
     ForwardCount: int = 0
     NeutralCount: int = 0
-    class Config:
-        from_attributes = True
 
-class FeetCreate(BaseModel):
+
+class FeetCreate(BodyPartBase):
     AnkleOnKneeCount: int = 0
     FlatCount: int = 0
-    class Config:
-        from_attributes = True
 
-class HeadCreate(BaseModel):
+
+class HeadCreate(BodyPartBase):
     BowedCount: int = 0
     NeutralCount: int = 0
     TiltBackCount: int = 0
-    class Config:
-        from_attributes = True
-        
-class ShoulderCreate(BaseModel):
+
+
+class ShoulderCreate(BodyPartBase):
     HunchedCount: int = 0
     NeutralCount: int = 0
     ShrugCount: int = 0
-    class Config:
-        from_attributes = True
 
-class NeckCreate(BaseModel):
+
+class NeckCreate(BodyPartBase):
     ForwardCount: int = 0
     NeutralCount: int = 0
-    class Config:
-        from_attributes = True
 
-# Detections api 的請求體或回應的數據格式
-class DetectionCreate(BaseModel):
-    StartTime: str
-    EndTime: str
-    TotalTime: str
+
+# Detection API 的請求和回應模型
+class DetectionBase(BaseModel):
+    StartTime: datetime
+    EndTime: datetime
+    TotalTime: time
     TotalPredictions: int
+
+
+class DetectionCreate(DetectionBase):
     Torso: TorsoCreate
     Feet: FeetCreate
     Head: HeadCreate
     Shoulder: ShoulderCreate
     Neck: NeckCreate
 
-class DetectionResponse(BaseModel):
+
+class DetectionResponse(DetectionBase):
     DetectionID: int
     UserID: int
-    StartTime: str
-    EndTime: str
-    TotalTime: str
-    TotalPredictions: int
-    Torso: TorsoCreate  # 包含 Torso 的資料
-    Feet: FeetCreate  # 包含 Feet 的資料
-    Head: HeadCreate  # 包含 Head 的資料
-    Shoulder: ShoulderCreate  # 包含 Shoulder 的資料
-    Neck: NeckCreate  # 包含 Neck 的資料
+    Torso: TorsoCreate
+    Feet: FeetCreate
+    Head: HeadCreate
+    Shoulder: ShoulderCreate
+    Neck: NeckCreate
 
     class Config:
         from_attributes = True
 
+
+# 集合返回模型
+class UsersPublic(BaseModel):
+    data: List[UserResponse]
+    count: int
+
+
+class FriendRequestsPublic(BaseModel):
+    data: List[FriendRequestResponse]
+    count: int
+
+
+class FriendListsPublic(BaseModel):
+    data: List[FriendListResponse]
+    count: int
+
+
+class DetectionsPublic(BaseModel):
+    data: List[DetectionResponse]
+    count: int
+
+
+# 通用成功訊息
+class SuccessMessage(BaseModel):
+    message: str
