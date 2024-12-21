@@ -10,3 +10,6 @@ passlib==1.7.4
 python-jose
 python-dotenv
 cryptography
+pytest
+pytest-asyncio
+httpx
