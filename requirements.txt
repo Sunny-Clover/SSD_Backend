@@ -11,5 +11,6 @@ python-jose
 python-dotenv
 cryptography
 pytest
+pytest-cov
 pytest-asyncio
 httpx

@@ -5,6 +5,7 @@ services:
     build: .
     container_name: fastapi_app
     command: bash -c 'while !</dev/tcp/db/3306; do sleep 1; done; uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload'
+    # command: pytest --cov=app/tests --cov-report=term-missing
     ports:
       - "8000:8000"
     environment:
@@ -12,7 +13,8 @@ services:
     volumes:
       - ./app:/app/app # 掛載後端目錄
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: mysql:8.0
@@ -22,9 +24,30 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: password
       MYSQL_DATABASE: mysql_db
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - ./SSD_SQL/SSDSetup.sql:/docker-entrypoint-initdb.d/SSDSetup.sql  # 初始化資料庫
       - ./SSD_SQL/InsertDetection.sql:/docker-entrypoint-initdb.d/InsertDetection.sql  # 初始化SP
       # - ./mysql_data:/var/lib/mysql  # 掛載持久化數據
     # ports:
     #   - "3306:3306"
+  tests:
+    build: .
+    container_name: fastapi_tests
+    command: bash -c "while !</dev/tcp/db/3306; do sleep 1; done; pytest --cov=app/tests --cov-report=term-missing"
+    environment:
+      - DATABASE_URL=mysql+pymysql://user:password@db:3306/mysql_db
+      - PYTHONPATH=/app # 這行很重要，不然pytest執行下去都會找不到app的module
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+    volumes:
+      - ./app:/app/app
+      - ./app/tests:/app/app/tests
+
