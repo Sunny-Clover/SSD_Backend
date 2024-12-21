@@ -1,15 +1,15 @@
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
 from app.core.security import verify_password, create_access_token, create_refresh_token, decode_token
-from app.core.database import SessionLocal, get_db
+from app.api.deps import SessionDep
 from app.models import User
 from app.schemas import TokenResponse, RefreshTokenRequest
 
 router = APIRouter()
 
 @router.post("/token", response_model=TokenResponse)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: SessionDep):
     user = db.query(User).filter(User.UserName == form_data.username).first()
     if not user or not verify_password(form_data.password, user.Password):
         raise HTTPException(
@@ -22,7 +22,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh_access_token(refresh_token_req: RefreshTokenRequest, db: Session = Depends(get_db)):
+def refresh_access_token(refresh_token_req: RefreshTokenRequest, db: SessionDep):
     payload = decode_token(refresh_token_req.refresh_token)
     if payload is None:
         raise HTTPException(

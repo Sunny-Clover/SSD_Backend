@@ -1,129 +1,202 @@
-from sqlalchemy import Column, Integer, String, Enum, Boolean, Float, Time, TIMESTAMP, ForeignKey, UniqueConstraint, func
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import UniqueConstraint, ForeignKeyConstraint, Column, Integer, ForeignKey
+from typing import Optional, List
+from datetime import time, datetime
+from enum import Enum
 
-Base = declarative_base()
 
-class User(Base):
-    __tablename__ = 'User'
-    
-    UserID = Column(Integer, primary_key=True, autoincrement=True)
-    UserName = Column(String(50), unique=True, nullable=False)
-    Email = Column(String(100), unique=True, nullable=False)
-    Password = Column(String(255), nullable=False)
-    FirstName = Column(String(50), default='')
-    LastName = Column(String(50), default='')
-    Gender = Column(Enum('Male', 'Female', 'Other'), default='Other')
-    PhotoUrl = Column(String(255), default='')
-    InstantPostureAlertEnable = Column(Boolean, default=False)
-    PostureAlertDelayTime = Column(Time, default='00:00:00')
-    IdleAlertEnable = Column(Boolean, default=False)
-    IdleAlertDelayTime = Column(Time, default='00:00:00')
-    AverageScore = Column(Float, default=0.0)
-    TotalTime = Column(Time, default='00:00:00')
-    CreateDate = Column(TIMESTAMP, server_default=func.now())
-    ModDate = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+# 定義性別選項
+class GenderEnum(str, Enum):
+    Male = "Male"
+    Female = "Female"
+    Other = "Other"
 
-class FriendList(Base):
-    __tablename__ = 'FriendList'
-    
-    FriendID = Column(Integer, primary_key=True, autoincrement=True)
-    UserID1 = Column(Integer, ForeignKey('User.UserID'), nullable=False)
-    UserID2 = Column(Integer, ForeignKey('User.UserID'), nullable=False)
-    Status = Column(Enum('Pending', 'Accepted', 'Blocked'), default='Pending')
-    RequestDate = Column(TIMESTAMP, server_default=func.now())
-    CreateDate = Column(TIMESTAMP, server_default=func.now())
-    ModDate = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
-    __table_args__ = (
-        UniqueConstraint('UserID1', 'UserID2'),
-    )
+# 定義好友請求狀態
+class StatusEnum(str, Enum):
+    Pending = "Pending"
+    Accepted = "Accepted"
+    Declined = "Declined"
 
-class FriendRequest(Base):
-    __tablename__ = 'FriendRequest'
-    
-    RequestID = Column(Integer, primary_key=True, autoincrement=True)
-    SenderID = Column(Integer, ForeignKey('User.UserID'), nullable=False)
-    ReceiverID = Column(Integer, ForeignKey('User.UserID'), nullable=False)
-    RequestDate = Column(TIMESTAMP, server_default=func.now())
-    Status = Column(Enum('Pending', 'Accepted', 'Declined'), default='Pending')
-    CreateDate = Column(TIMESTAMP, server_default=func.now())
-    ModDate = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
-    __table_args__ = (
-        UniqueConstraint('SenderID', 'ReceiverID'),
-    )
+# 基底類別：包含時間戳的共用欄位
+class TimestampMixin(SQLModel):
+    CreateDate: Optional[datetime] = Field(default_factory=datetime.utcnow, nullable=False)
+    ModDate: Optional[datetime] = Field(default_factory=datetime.utcnow, nullable=False, sa_column_kwargs={"onupdate": datetime.utcnow})
 
-class BlockedList(Base):
-    __tablename__ = 'BlockedList'
-    
-    BlockID = Column(Integer, primary_key=True, autoincrement=True)
-    BlockerID = Column(Integer, ForeignKey('User.UserID'), nullable=False)
-    BlockedID = Column(Integer, ForeignKey('User.UserID'), nullable=False)
-    BlockDate = Column(TIMESTAMP, server_default=func.now())
-    CreateDate = Column(TIMESTAMP, server_default=func.now())
-    ModDate = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+
+# User 表
+class UserBase(SQLModel):
+    UserName: str = Field(max_length=50, nullable=False, unique=True)
+    Email: str = Field(max_length=100, nullable=False, unique=True)
+    FirstName: Optional[str] = Field(default='', max_length=50)
+    LastName: Optional[str] = Field(default='', max_length=50)
+    Gender: Optional[GenderEnum] = Field(default=GenderEnum.Other)
+    PhotoUrl: Optional[str] = Field(default='', max_length=255)
+    PostureAlertEnable: Optional[bool] = Field(default=False)
+    PostureAlertTime: Optional[time] = Field(default=time(0, 0, 0))
+    IdleAlertEnable: Optional[bool] = Field(default=False)
+    IdleAlertTime: Optional[time] = Field(default=time(0, 0, 0))
+    AllTimeScore: Optional[float] = Field(default=0.0)
+    TotalDetectionTime: Optional[time] = Field(default=time(0, 0, 0))
+
+
+class User(UserBase, TimestampMixin, table=True):
+    UserID: int = Field(default=None, primary_key=True)
+    Password: str = Field(max_length=255, nullable=False)
+
+    detections: List["Detection"] = Relationship(back_populates="user")
+
+# FriendList 表
+class FriendList(TimestampMixin, table=True):
+    FriendID: Optional[int] = Field(default=None, primary_key=True)
+    UserID1: int = Field(nullable=False)
+    UserID2: int = Field(nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('BlockerID', 'BlockedID'),
+        UniqueConstraint("UserID1", "UserID2"),  # 使用 UniqueConstraint 來定義組合唯一約束
+        ForeignKeyConstraint(["UserID1"], ["user.UserID"], name="fk_friendlist_user1"),
+        ForeignKeyConstraint(["UserID2"], ["user.UserID"], name="fk_friendlist_user2")
     )
 
-class Record(Base):
-    __tablename__ = 'Record'
-    
-    RecordID = Column(Integer, primary_key=True, autoincrement=True)
-    UserID = Column(Integer, ForeignKey('User.UserID'), nullable=False)
-    StartTime = Column(TIMESTAMP, nullable=False)
-    EndTime = Column(TIMESTAMP, nullable=False)
-    TotalTime = Column(Time, nullable=False)
-    TotalPredictions = Column(Integer, nullable=False)
-    CreateDate = Column(TIMESTAMP, server_default=func.now())
-    ModDate = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
-class Body(Base):
-    __tablename__ = 'Body'
-    
-    RecordID = Column(Integer, ForeignKey('Record.RecordID'), primary_key=True)
-    BackwardCount = Column(Integer, default=0)
-    ForwardCount = Column(Integer, default=0)
-    NeutralCount = Column(Integer, default=0)
-    CreateDate = Column(TIMESTAMP, server_default=func.now())
-    ModDate = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+# FriendRequest 表
+class FriendRequest(TimestampMixin, table=True):
+    RequestID: Optional[int] = Field(default=None, primary_key=True)
+    SenderID: int = Field(nullable=False)
+    ReceiverID: int = Field(nullable=False)
+    Status: Optional[StatusEnum] = Field(default=StatusEnum.Pending)
+    RequestDate: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-class Feet(Base):
-    __tablename__ = 'Feet'
-    
-    RecordID = Column(Integer, ForeignKey('Record.RecordID'), primary_key=True)
-    AnkleOnKneeCount = Column(Integer, default=0)
-    FlatCount = Column(Integer, default=0)
-    CreateDate = Column(TIMESTAMP, server_default=func.now())
-    ModDate = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    __table_args__ = (
+        UniqueConstraint("SenderID", "ReceiverID"),
+        ForeignKeyConstraint(["SenderID"], ["user.UserID"], name="fk_friendrequest_user1"),
+        ForeignKeyConstraint(["ReceiverID"], ["user.UserID"], name="fk_friendrequest_user2")
+    )
 
-class Head(Base):
-    __tablename__ = 'Head'
-    
-    RecordID = Column(Integer, ForeignKey('Record.RecordID'), primary_key=True)
-    BowedCount = Column(Integer, default=0)
-    NeutralCount = Column(Integer, default=0)
-    TiltBackCount = Column(Integer, default=0)
-    CreateDate = Column(TIMESTAMP, server_default=func.now())
-    ModDate = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
-class Shoulder(Base):
-    __tablename__ = 'Shoulder'
-    
-    RecordID = Column(Integer, ForeignKey('Record.RecordID'), primary_key=True)
-    HunchedCount = Column(Integer, default=0)
-    NeutralCount = Column(Integer, default=0)
-    ShrugCount = Column(Integer, default=0)
-    CreateDate = Column(TIMESTAMP, server_default=func.now())
-    ModDate = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+# BlockList 表
+class BlockList(TimestampMixin, table=True):
+    BlockID: Optional[int] = Field(default=None, primary_key=True)
+    BlockerID: int = Field(nullable=False)
+    BlockedID: int = Field(nullable=False)
+    BlockDate: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-class Neck(Base):
-    __tablename__ = 'Neck'
-    
-    RecordID = Column(Integer, ForeignKey('Record.RecordID'), primary_key=True)
-    ForwardCount = Column(Integer, default=0)
-    NeutralCount = Column(Integer, default=0)
-    CreateDate = Column(TIMESTAMP, server_default=func.now())
-    ModDate = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    __table_args__ = (
+        UniqueConstraint("BlockerID", "BlockedID"),
+        ForeignKeyConstraint(["BlockerID"], ["user.UserID"], name="fk_blocklist_user1"),
+        ForeignKeyConstraint(["BlockedID"], ["user.UserID"], name="fk_blocklist_user2")
+    )
+
+
+# Detection 表
+class Detection(TimestampMixin, table=True):
+    DetectionID: Optional[int] = Field(default=None, primary_key=True)
+    UserID: int = Field(foreign_key='user.UserID', nullable=False)
+    UserID: int = Field(
+        sa_column=Column(
+            Integer, 
+            ForeignKey("user.UserID", name="fk_detection_userid"), 
+            nullable=False
+        )
+    )
+    StartTime: datetime = Field(nullable=False)
+    EndTime: datetime = Field(nullable=False)
+    TotalTime: time = Field(nullable=False)
+    TotalPredictions: int = Field(nullable=False)
+    Score: float = Field(nullable=False)
+
+    # # 關聯到 User 表
+    user: Optional[User] = Relationship(back_populates="detections")
+
+    # 關聯到身體部位表
+    head: Optional["Head"] = Relationship(back_populates="detection", sa_relationship_kwargs={"cascade": "all, delete"})
+    neck: Optional["Neck"] = Relationship(back_populates="detection", sa_relationship_kwargs={"cascade": "all, delete"})
+    shoulder: Optional["Shoulder"] = Relationship(back_populates="detection", sa_relationship_kwargs={"cascade": "all, delete"})
+    torso: Optional["Torso"] = Relationship(back_populates="detection", sa_relationship_kwargs={"cascade": "all, delete"})
+    feet: Optional["Feet"] = Relationship(back_populates="detection", sa_relationship_kwargs={"cascade": "all, delete"})
+
+
+# BodyPartMixin：共用的部位欄位
+class BodyPartMixin(SQLModel):
+    # DetectionID: int = Field(primary_key=True)
+    PredictionCount: Optional[int] = Field(default=0)
+    PartialScore: Optional[float] = Field(default=0.0)
+
+
+# Head 表
+class Head(BodyPartMixin, table=True):
+    DetectionID: int = Field(
+        sa_column=Column(
+            Integer, 
+            ForeignKey("detection.DetectionID", name="fk_head_detectionid"),
+            primary_key=True
+        )
+    )
+    BowedCount: Optional[int] = Field(default=0)
+    NeutralCount: Optional[int] = Field(default=0)
+    TiltBackCount: Optional[int] = Field(default=0)
+
+    detection: Optional[Detection] = Relationship(back_populates="head")
+
+
+# Neck 表
+class Neck(BodyPartMixin, table=True):
+    DetectionID: int = Field(
+        sa_column=Column(
+            Integer, 
+            ForeignKey("detection.DetectionID", name="fk_neck_detectionid"),
+            primary_key=True
+        )
+    )
+    ForwardCount: Optional[int] = Field(default=0)
+    NeutralCount: Optional[int] = Field(default=0)
+
+    detection: Optional[Detection] = Relationship(back_populates="neck")
+
+
+# Shoulder 表
+class Shoulder(BodyPartMixin, table=True):
+    DetectionID: int = Field(
+        sa_column=Column(
+            Integer, 
+            ForeignKey("detection.DetectionID", name="fk_shoulder_detectionid"),
+            primary_key=True
+        )
+    )
+    HunchedCount: Optional[int] = Field(default=0)
+    NeutralCount: Optional[int] = Field(default=0)
+    ShrugCount: Optional[int] = Field(default=0)
+
+    detection: Optional[Detection] = Relationship(back_populates="shoulder")
+
+
+# Torso 表
+class Torso(BodyPartMixin, table=True):
+    DetectionID: int = Field(
+        sa_column=Column(
+            Integer, 
+            ForeignKey("detection.DetectionID", name="fk_torso_detectionid"),
+            primary_key=True
+        )
+    )
+    BackwardCount: Optional[int] = Field(default=0)
+    ForwardCount: Optional[int] = Field(default=0)
+    NeutralCount: Optional[int] = Field(default=0)
+
+    detection: Optional[Detection] = Relationship(back_populates="torso")
+
+
+# Feet 表
+class Feet(BodyPartMixin, table=True):
+    DetectionID: int = Field(
+        sa_column=Column(
+            Integer, 
+            ForeignKey("detection.DetectionID", name="fk_feet_detectionid"),
+            primary_key=True
+        )
+    )
+    AnkleOnKneeCount: Optional[int] = Field(default=0)
+    FlatCount: Optional[int] = Field(default=0)
+
+    detection: Optional[Detection] = Relationship(back_populates="feet")

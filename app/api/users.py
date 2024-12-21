@@ -1,19 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from app.models import User
-from app.schemas import UserCreate, UserUpdate, UserResponse, SuccessMessage
-from app.core.database import SessionLocal, engine
-from app.core.security import get_password_hash
-from app.core.database import get_db
-from app.dependencies import get_current_user
+from app.schemas import UserRegister, UserUpdate, UserResponse, PasswordUpdate, SuccessMessage
+from app.core.security import get_password_hash, verify_password
+from app.api.deps import CurrentUser, SessionDep
 
 from typing import Annotated
 
 router = APIRouter()
 
-@router.post("/", response_model=SuccessMessage)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=UserResponse)
+def create_user(user: UserRegister, db: SessionDep):
     # 檢查郵箱是否已經存在
     db_user = db.query(User).filter(User.Email == user.Email).first()
     if db_user:
@@ -24,77 +21,67 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="用戶名已被使用")
     
-    # 創建新用戶
-    hashed_password = get_password_hash(user.Password)
-    new_user = User(
-        Email=user.Email,
-        UserName=user.UserName,
-        Password=hashed_password,
-    )
+    user_data = user.dict()
+    user_data['Password'] = get_password_hash(user.Password)
+
+    new_user = User(**user_data)
+
+    # 添加並提交到資料庫
     db.add(new_user)
     db.commit()
+    db.refresh(new_user)
+    
+    return new_user
 
-    # 呼叫存儲過程注入假資料
-    for year in range(2020, 2025, 1):
-        db.execute(text("CALL InsertYearlyData(:p_year, :p_userID)"), {"p_year": year, "p_userID": new_user.UserID})
-    db.commit()
-
-    return SuccessMessage(message="用戶註冊成功")
-
-'''
-只更新有提供的欄位(不包含password)
-'''
-@router.put("/", response_model=SuccessMessage)
-def update_user(user: UserUpdate, current_user: Annotated[UserResponse, Depends(get_current_user)], db: Session = Depends(get_db)):
-    # 檢查用戶是否存在
+@router.patch("/me", response_model=UserResponse)
+def update_user(user: UserUpdate, current_user: CurrentUser, db: SessionDep):
     db_user = db.query(User).filter(User.UserID == current_user.UserID).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="用戶未找到")
     
-    # 更新用戶資料
-    update_data = user.dict(exclude_unset=True)  # 只保留提供的欄位
-    for field, value in update_data.items():
-        if field in ["Email"]:
-            existing_user = db.query(User).filter(getattr(User, field) == value).first()
-            if getattr(existing_user, "UserID") != current_user.UserID:
-                raise HTTPException(status_code=400, detail=f"{field} 已被使用")
-            
-        setattr(db_user, field, value)  # 更新欄位
+    update_data = user.dict(exclude_unset=True) # 保留有提供的欄位
 
+    for field, value in update_data.items():
+        if field == "Email" and value != db_user.Email:
+            existing_user = db.query(User).filter(User.Email == user.Email).first()
+            if existing_user:
+                raise HTTPException(status_code=400, detail="電子郵件已被註冊")
+        setattr(db_user, field, value)
+    
     db.commit()
     db.refresh(db_user)
-    return SuccessMessage(message="用戶資料更新成功")
 
-# 暫時先不用patch(partial update)
-@router.patch("/", response_model=SuccessMessage)
-def update_user(user: UserCreate, current_user: Annotated[UserResponse, Depends(get_current_user)], db: Session = Depends(get_db)):
-    # 檢查用戶是否存在
-    db_user = db.query(User).filter(User.UserID == current_user.UserID).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="用戶未找到")
+    return db_user
+
+@router.patch("/me/password", response_model=SuccessMessage)
+def update_password(
+    password_data: PasswordUpdate,
+    current_user: CurrentUser,
+    db: SessionDep
+):
+    # 1. 驗證當前密碼是否正確
+    if not verify_password(password_data.current_password, current_user.Password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="當前密碼不正確",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
-    # 檢查郵箱是否已經存在
-    if user.Email is not None and user.Email != db_user.Email:
-        existing_user = db.query(User).filter(User.Email == user.Email).first()
-        if existing_user:
-            raise HTTPException(status_code=400, detail="電子郵件已被註冊")
-        db_user.Email = user.Email  # 更新郵箱
+    # 2. 確保新密碼與當前密碼不同
+    if verify_password(password_data.new_password, current_user.Password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="新密碼不能與當前密碼相同",
+        )
     
-    # 檢查用戶名是否已經存在
-    if user.UserName is not None and user.UserName != db_user.UserName:
-        existing_user = db.query(User).filter(User.UserName == user.UserName).first()
-        if existing_user:
-            raise HTTPException(status_code=400, detail="用戶名已被使用")
-        db_user.UserName = user.UserName  # 更新用戶名
-    
-    # 更新密碼（如果提供了新密碼）
-    if user.Password is not None:
-        db_user.Password = get_password_hash(user.Password)  # 更新密碼
+    hashed_new_password = get_password_hash(password_data.new_password)
+    current_user.Password = hashed_new_password
     
     db.commit()
+    db.refresh(current_user)
+    
+    return SuccessMessage(message="密碼更新成功")
 
-    return SuccessMessage(message="用戶資料更新成功")
-
-@router.get("/", response_model=UserResponse)
-def read_users_me(current_user: Annotated[UserResponse, Depends(get_current_user)]):
+@router.get("/me", response_model=UserResponse)
+def read_users_me(current_user: CurrentUser):
     return current_user

@@ -1,5 +1,4 @@
--- 使用 SSD 資料庫
-USE SSD;
+/* Do not maintain any more. Oct 13 2024 */
 
 /* ===== 插入會員好友資料的假資料 ===== */
 -- 插入假資料到 User 表
@@ -28,8 +27,8 @@ VALUES
 (5, 1, 'Accepted'),
 (1, 5, 'Accepted');
 
--- 插入假資料到 BlockedList 表
-INSERT INTO BlockedList (BlockerID, BlockedID)
+-- 插入假資料到 BlockList 表
+INSERT INTO BlockList (BlockerID, BlockedID)
 VALUES 
 (1, 3),
 (2, 4),
@@ -39,8 +38,8 @@ VALUES
 
 
 /* ===== 插入偵測紀錄的假資料 ===== */
--- 插入假資料到 Record 表
-INSERT INTO Record (UserID, StartTime, EndTime, TotalTime, TotalPredictions)
+-- 插入假資料到 Detection 表
+INSERT INTO Detection (UserID, StartTime, EndTime, TotalTime, TotalPredictions)
 VALUES 
 (1, '2023-07-01 08:00:00', '2023-07-01 09:00:00', '01:00:00', 100),
 (2, '2023-07-01 09:00:00', '2023-07-01 10:00:00', '01:00:00', 120),
@@ -48,8 +47,8 @@ VALUES
 (4, '2023-07-01 11:00:00', '2023-07-01 12:00:00', '01:00:00', 110),
 (5, '2023-07-01 12:00:00', '2023-07-01 13:00:00', '01:00:00', 95);
 
--- 插入假資料到 Body 表
-INSERT INTO Body (RecordID, BackwardCount, ForwardCount, NeutralCount)
+-- 插入假資料到 Torso 表
+INSERT INTO Torso (DetectionID, BackwardCount, ForwardCount, NeutralCount)
 VALUES 
 (1, 30, 40, 30),
 (2, 25, 45, 50),
@@ -58,7 +57,7 @@ VALUES
 (5, 30, 35, 30);
 
 -- 插入假資料到 Feet 表
-INSERT INTO Feet (RecordID, AnkleOnKneeCount, FlatCount)
+INSERT INTO Feet (DetectionID, AnkleOnKneeCount, FlatCount)
 VALUES 
 (1, 40, 60),
 (2, 30, 90),
@@ -67,7 +66,7 @@ VALUES
 (5, 35, 60);
 
 -- 插入假資料到 Head 表
-INSERT INTO Head (RecordID, BowedCount, NeutralCount, TiltBackCount)
+INSERT INTO Head (DetectionID, BowedCount, NeutralCount, TiltBackCount)
 VALUES 
 (1, 20, 60, 20),
 (2, 25, 70, 25),
@@ -76,7 +75,7 @@ VALUES
 (5, 20, 60, 15);
 
 -- 插入假資料到 Shoulder 表
-INSERT INTO Shoulder (RecordID, HunchedCount, NeutralCount, ShrugCount)
+INSERT INTO Shoulder (DetectionID, HunchedCount, NeutralCount, ShrugCount)
 VALUES 
 (1, 25, 50, 25),
 (2, 30, 60, 30),
@@ -85,7 +84,7 @@ VALUES
 (5, 25, 50, 20);
 
 -- 插入假資料到 Neck 表
-INSERT INTO Neck (RecordID, ForwardCount, NeutralCount)
+INSERT INTO Neck (DetectionID, ForwardCount, NeutralCount)
 VALUES 
 (1, 40, 60),
 (2, 35, 85),

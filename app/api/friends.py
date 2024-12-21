@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
 from app.models import User, FriendList, FriendRequest
 from app.schemas import UserResponse, FriendRequestCreate, FriendRequestResponse, SuccessMessage, FriendRequestAction
-from app.core.database import get_db
-from app.dependencies import get_current_user
+from app.api.deps import get_current_user
+from app.api.deps import CurrentUser, SessionDep
 from typing import List, Annotated
 
 router = APIRouter()
 
 @router.get("/", response_model=List[UserResponse])
 async def get_friends_list(
-    current_user: Annotated[UserResponse, Depends(get_current_user)],
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: SessionDep
 ):
     friends = db.query(User).join(FriendList, (FriendList.UserID1 == User.UserID) | (FriendList.UserID2 == User.UserID))\
         .filter(
@@ -25,8 +24,8 @@ async def get_friends_list(
 @router.post("/request", response_model=SuccessMessage)
 async def send_friend_request(
     request: FriendRequestCreate,
-    current_user: Annotated[UserResponse, Depends(get_current_user)],
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: SessionDep
 ):
     # 檢查接收者是否存在
     receiver = db.query(User).filter(User.UserID == request.ReceiverID).first()
@@ -61,8 +60,8 @@ async def send_friend_request(
 
 @router.get("/requests", response_model=List[FriendRequestResponse])
 async def get_friend_requests(
-    current_user: Annotated[UserResponse, Depends(get_current_user)],
-    db: Session = Depends(get_db),
+    current_user: CurrentUser,
+    db: SessionDep,
     request_type: str = Query(..., description="請求類型：'received' 或 'sent'")
 ):
     if request_type not in ['received', 'sent']:
@@ -95,8 +94,8 @@ async def get_friend_requests(
 async def handle_friend_request(
     request_id: int,
     action: FriendRequestAction,
-    current_user: Annotated[UserResponse, Depends(get_current_user)],
-    db: Session = Depends(get_db)
+    current_user: CurrentUser,
+    db: SessionDep
 ):
     friend_request = db.query(FriendRequest).filter(
         FriendRequest.RequestID == request_id,

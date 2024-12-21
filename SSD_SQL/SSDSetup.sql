@@ -2,22 +2,22 @@
 CREATE TABLE IF NOT EXISTS User (
     UserID INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     UserName VARCHAR(50) NOT NULL,
-    Email VARCHAR(100) NOT NULL,
     Password VARCHAR(255) NOT NULL,
     FirstName VARCHAR(50),
     LastName VARCHAR(50),
+    Email VARCHAR(100) NOT NULL,
     Gender ENUM('Male', 'Female', 'Other'),
     PhotoUrl VARCHAR(255),
-    InstantPostureAlertEnable BOOLEAN DEFAULT FALSE,
-	PostureAlertDelayTime TIME,
+    PostureAlertEnable BOOLEAN DEFAULT FALSE,
+	PostureAlertTime TIME,
     IdleAlertEnable BOOLEAN DEFAULT FALSE,
-    IdleAlertDelayTime TIME,
-    AverageScore FLOAT,
-    TotalTime TIME,
-    Level INT,
+    IdleAlertTime TIME,
+    AllTimeScore FLOAT,
+    TotalDetectionTime TIME,
     CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE (UserName, Email)
+    UNIQUE (UserName),
+    UNIQUE (Email)
 );
 
 -- 創建 Friends 表
@@ -25,8 +25,6 @@ CREATE TABLE IF NOT EXISTS FriendList (
     FriendID INT PRIMARY KEY AUTO_INCREMENT,
     UserID1 INT NOT NULL,
     UserID2 INT NOT NULL,
-    Status ENUM('Pending', 'Accepted', 'Blocked') DEFAULT 'Pending',
-    RequestDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (UserID1) REFERENCES User(UserID),
@@ -39,8 +37,8 @@ CREATE TABLE IF NOT EXISTS FriendRequest (
     RequestID INT PRIMARY KEY AUTO_INCREMENT,
     SenderID INT NOT NULL,
     ReceiverID INT NOT NULL,
-    RequestDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     Status ENUM('Pending', 'Accepted', 'Declined') DEFAULT 'Pending',
+    RequestDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (SenderID) REFERENCES User(UserID),
@@ -48,8 +46,8 @@ CREATE TABLE IF NOT EXISTS FriendRequest (
     UNIQUE (SenderID, ReceiverID)
 );
 
--- 創建 BlockedList 表
-CREATE TABLE IF NOT EXISTS BlockedList (
+-- 創建 BlockList 表
+CREATE TABLE IF NOT EXISTS BlockList (
     BlockID INT PRIMARY KEY AUTO_INCREMENT,
     BlockerID INT NOT NULL,
     BlockedID INT NOT NULL,
@@ -86,7 +84,7 @@ DELIMITER ;
 
 -- 確保不能自己封鎖自己
 DELIMITER //
-CREATE TRIGGER prevent_self_block BEFORE INSERT ON BlockedList
+CREATE TRIGGER prevent_self_block BEFORE INSERT ON BlockList
 FOR EACH ROW
 BEGIN
     IF NEW.BlockerID = NEW.BlockedID THEN
@@ -111,7 +109,7 @@ DELIMITER ;
 
 -- 確保封鎖好友後從 FriendList 表中移除記錄
 DELIMITER //
-CREATE TRIGGER auto_remove_friend AFTER INSERT ON BlockedList
+CREATE TRIGGER auto_remove_friend AFTER INSERT ON BlockList
 FOR EACH ROW
 BEGIN
     DELETE FROM FriendList WHERE (UserID1 = NEW.BlockerID AND UserID2 = NEW.BlockedID) OR (UserID1 = NEW.BlockedID AND UserID2 = NEW.BlockerID);
@@ -120,68 +118,79 @@ END;
 DELIMITER ;
 
 
--- 創建 Record 表
-CREATE TABLE IF NOT EXISTS Record (
-    RecordID INT PRIMARY KEY AUTO_INCREMENT,
+-- 創建 Detection 表
+CREATE TABLE IF NOT EXISTS Detection (
+    DetectionID INT PRIMARY KEY AUTO_INCREMENT,
     UserID INT NOT NULL,
     StartTime TIMESTAMP NOT NULL,
     EndTime TIMESTAMP NOT NULL,
     TotalTime TIME NOT NULL,
     TotalPredictions INT NOT NULL,
+    Score FLOAT NOT NULL,
     CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (UserID) REFERENCES User(UserID)
 );
 
--- 創建 Body 表
-CREATE TABLE IF NOT EXISTS Body (
-    RecordID INT PRIMARY KEY,
-    BackwardCount INT DEFAULT 0,
-    ForwardCount INT DEFAULT 0,
-    NeutralCount INT DEFAULT 0,
-    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
-);
-
--- 創建 Feet 表
-CREATE TABLE IF NOT EXISTS Feet (
-    RecordID INT PRIMARY KEY,
-    AnkleOnKneeCount INT DEFAULT 0,
-    FlatCount INT DEFAULT 0,
-    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
-);
-
 -- 創建 Head 表
 CREATE TABLE IF NOT EXISTS Head (
-    RecordID INT PRIMARY KEY,
+    DetectionID INT PRIMARY KEY,
     BowedCount INT DEFAULT 0,
     NeutralCount INT DEFAULT 0,
     TiltBackCount INT DEFAULT 0,
+    PredictionCount INT NOT NULL DEFAULT 0,
+    PartialScore FLOAT NOT NULL,
     CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
+    FOREIGN KEY (DetectionID) REFERENCES Detection(DetectionID)
+);
+-- 創建 Neck 表
+CREATE TABLE IF NOT EXISTS Neck (
+    DetectionID INT PRIMARY KEY,
+    ForwardCount INT DEFAULT 0,
+    NeutralCount INT DEFAULT 0,
+    PredictionCount INT NOT NULL DEFAULT 0,
+    PartialScore FLOAT NOT NULL,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (DetectionID) REFERENCES Detection(DetectionID)
 );
 
 -- 創建 Shoulder 表
 CREATE TABLE IF NOT EXISTS Shoulder (
-    RecordID INT PRIMARY KEY,
+    DetectionID INT PRIMARY KEY,
     HunchedCount INT DEFAULT 0,
     NeutralCount INT DEFAULT 0,
     ShrugCount INT DEFAULT 0,
+    PredictionCount INT NOT NULL DEFAULT 0,
+    PartialScore FLOAT NOT NULL,
     CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
+    FOREIGN KEY (DetectionID) REFERENCES Detection(DetectionID)
 );
 
--- 創建 Neck 表
-CREATE TABLE IF NOT EXISTS Neck (
-    RecordID INT PRIMARY KEY,
+
+-- 創建 Torso 表
+CREATE TABLE IF NOT EXISTS Torso (
+    DetectionID INT PRIMARY KEY,
+    BackwardCount INT DEFAULT 0,
     ForwardCount INT DEFAULT 0,
     NeutralCount INT DEFAULT 0,
+    PredictionCount INT NOT NULL DEFAULT 0,
+    PartialScore FLOAT NOT NULL,
     CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (RecordID) REFERENCES Record(RecordID)
+    FOREIGN KEY (DetectionID) REFERENCES Detection(DetectionID)
+);
+
+-- 創建 Feet 表
+CREATE TABLE IF NOT EXISTS Feet (
+    DetectionID INT PRIMARY KEY,
+    AnkleOnKneeCount INT DEFAULT 0,
+    FlatCount INT DEFAULT 0,
+    PredictionCount INT NOT NULL DEFAULT 0,
+    PartialScore FLOAT NOT NULL,
+    CreateDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ModDate TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (DetectionID) REFERENCES Detection(DetectionID)
 );
