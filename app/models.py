@@ -38,6 +38,7 @@ class UserBase(SQLModel):
     IdleAlertEnable: Optional[bool] = Field(default=False)
     IdleAlertTime: Optional[time] = Field(default=time(0, 0, 0))
     AllTimeScore: Optional[float] = Field(default=0.0)
+    TotalPredictionCount: Optional[int] = Field(default=0)
     TotalDetectionTime: Optional[time] = Field(default=time(0, 0, 0))
 
 
@@ -92,7 +93,7 @@ class BlockList(TimestampMixin, table=True):
 # Detection 表
 class Detection(TimestampMixin, table=True):
     DetectionID: Optional[int] = Field(default=None, primary_key=True)
-    UserID: int = Field(foreign_key='user.UserID', nullable=False)
+    # UserID: int = Field(foreign_key='user.UserID', nullable=False)
     UserID: int = Field(
         sa_column=Column(
             Integer, 
@@ -120,7 +121,7 @@ class Detection(TimestampMixin, table=True):
 # BodyPartMixin：共用的部位欄位
 class BodyPartMixin(SQLModel):
     # DetectionID: int = Field(primary_key=True)
-    PredictionCount: Optional[int] = Field(default=0)
+    # PredictionCount: Optional[int] = Field(default=0)
     PartialScore: Optional[float] = Field(default=0.0)
 
 
