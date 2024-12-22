@@ -1,7 +1,6 @@
 import requests
 
-# BASE_URL = "http://localhost:8000"  # FastAPI 服務的 URL
-BASE_URL = "http://fastapi_app:8000"
+BASE_URL = "http://localhost:8000"  # FastAPI 服務的 URL
 
 # 測試數據
 test_user_data = {
