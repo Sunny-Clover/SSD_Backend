@@ -34,6 +34,8 @@ class UserResponse(UserUpdatable):
     UserID: int
     Email: Optional[EmailStr] = None
     UserName: str
+    TotalPredictionCount: int
+    TotalDetectionTime: time
 
     class Config:
         from_attributes = True

@@ -38,6 +38,7 @@ class UserBase(SQLModel):
     IdleAlertEnable: Optional[bool] = Field(default=False)
     IdleAlertTime: Optional[time] = Field(default=time(0, 0, 0))
     AllTimeScore: Optional[float] = Field(default=0.0)
+    TotalPredictionCount: Optional[int] = Field(default=0)
     TotalDetectionTime: Optional[time] = Field(default=time(0, 0, 0))
 
 

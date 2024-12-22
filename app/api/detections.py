@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.models import Detection, Torso, Feet, Head, Shoulder, Neck
+from app.models import User, Detection, Torso, Feet, Head, Shoulder, Neck
 from app.schemas import UserResponse, DetectionCreate, DetectionResponse, TorsoCreate, FeetCreate, HeadCreate, ShoulderCreate, NeckCreate
 from app.api.deps import CurrentUser, SessionDep
 from typing import List, Annotated
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -24,7 +25,7 @@ def create_detection(
     shoulder_score = calculate_partial_score(detection_data.Shoulder.NeutralCount, detection_data.TotalPredictions)
     neck_score = calculate_partial_score(detection_data.Neck.NeutralCount, detection_data.TotalPredictions)
 
-    # 計算 Detection Score
+    # 計算 Single Detection Score
     detection_score = (torso_score + feet_score + head_score + shoulder_score + neck_score) / 5.0
 
     # 創建 Detection 記錄
@@ -80,9 +81,27 @@ def create_detection(
     # 新增部位資料到資料庫
     for part in body_parts.values():
         db.add(part)
-    
+    # region: 更新 User 資料
+    db_user = db.query(User).filter(User.UserID == current_user.UserID).first()
+    if db_user:
+        # 更新 User 的 AllTimeScore 跟 TotalPredictionCount
+        total_weight_after = (db_user.AllTimeScore * db_user.TotalPredictionCount) \
+                           + (detection_score * detection_data.TotalPredictions)
+        total_prediction_count_after = db_user.TotalPredictionCount + detection_data.TotalPredictions
+        db_user.AllTimeScore = total_weight_after / total_prediction_count_after
+        db_user.TotalPredictionCount = total_prediction_count_after
+
+        # 更新 User 的 TotalDetectionTime
+        new_detection_time = datetime.combine(datetime.min, db_user.TotalDetectionTime) + timedelta(
+            hours=detection_data.TotalTime.hour,
+            minutes=detection_data.TotalTime.minute,
+            seconds=detection_data.TotalTime.second
+        )
+        db_user.TotalDetectionTime = new_detection_time.time()
     db.commit()
-    db.refresh(new_detection)
+    db.refresh(new_detection) #commit過後重新refresh一遍
+    # endregion
+
 
     # TODO: 只能先這樣，還找不到解決Pydantic不能轉換nested的原因，我覺得可能是因為Detection的head是Relationship
     detection_response = DetectionResponse(
