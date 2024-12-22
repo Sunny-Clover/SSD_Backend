@@ -5,8 +5,12 @@ pymysql
 pydantic
 python-multipart
 email-validator
-bcrypt==4.1.1
-passlib==1.7.4
+bcrypt
 python-jose
 python-dotenv
 cryptography
+pytest
+pytest-cov
+pytest-asyncio
+httpx
+requests

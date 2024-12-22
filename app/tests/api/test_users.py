@@ -1,96 +1,70 @@
-# import pytest
-# from fastapi import status
-# from app.schemas import UserCreate, UserResponse
-# from sqlmodel import Session
-# from app.models import User
-# from app.database import get_session
-# from app.main import app
+import pytest
+import requests
 
-# @pytest.fixture
-# def test_user(client):
-#     user_data = {
-#         "Email": "test@example.com",
-#         "UserName": "testuser",
-#         "FirstName": "Test",
-#         "LastName": "User",
-#         "Password": "securepassword123"
-#     }
-#     response = client.post("/users/", json=user_data)
-#     assert response.status_code == status.HTTP_200_OK
-#     return response.json()
+BASE_URL = "http://localhost:8000"
 
-# def test_create_user_success(client):
-#     user_data = {
-#         "Email": "newuser@example.com",
-#         "UserName": "newuser",
-#         "FirstName": "New",
-#         "LastName": "User",
-#         "Password": "newsecurepassword"
-#     }
-#     response = client.post("/users/", json=user_data)
-#     assert response.status_code == status.HTTP_200_OK
-#     data = response.json()
-#     assert data["Email"] == user_data["Email"]
-#     assert data["UserName"] == user_data["UserName"]
-#     assert "Password" not in data  # 確保密碼不在響應中
+# 測試數據
+test_user_data = {
+    "UserName": "testuser",
+    "Email": "testuser@example.com",
+    "Password": "password123"
+}
 
-# def test_create_user_duplicate_email(client, test_user):
-#     user_data = {
-#         "Email": "test@example.com",  # 已存在的郵箱
-#         "UserName": "anotheruser",
-#         "FirstName": "Another",
-#         "LastName": "User",
-#         "Password": "anotherpassword"
-#     }
-#     response = client.post("/users/", json=user_data)
-#     assert response.status_code == status.HTTP_400_BAD_REQUEST
-#     assert response.json()["detail"] == "電子郵件已被註冊"
+updated_user_data = {
+    "FirstName": "Test",
+    "LastName": "User",
+    "Gender": "Other"
+}
 
-# def test_create_user_duplicate_username(client, test_user):
-#     user_data = {
-#         "Email": "unique@example.com",
-#         "UserName": "testuser",  # 已存在的用戶名
-#         "FirstName": "Unique",
-#         "LastName": "User",
-#         "Password": "uniquepassword"
-#     }
-#     response = client.post("/users/", json=user_data)
-#     assert response.status_code == status.HTTP_400_BAD_REQUEST
-#     assert response.json()["detail"] == "用戶名已被使用"
+password_update_data = {
+    "current_password": "password123",
+    "new_password": "newpassword456",
+    "confirm_password": "newpassword456"
+}
 
-# def test_create_user_invalid_password(client):
-#     user_data = {
-#         "Email": "invalidpass@example.com",
-#         "UserName": "invalidpassuser",
-#         "FirstName": "Invalid",
-#         "LastName": "Password",
-#         "Password": "short"  # 密碼太短
-#     }
-#     response = client.post("/users/", json=user_data)
-#     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY  # Pydantic 驗證失敗
-#     # 可以檢查具體的錯誤信息
-#     assert response.json()["detail"][0]["msg"] == "Password must be between 8 and 40 characters"
+@pytest.fixture
+def token():
+    """Fixture to create a user and log in to get a token."""
+    # 創建用戶
+    requests.post(f"{BASE_URL}/users/", json=test_user_data)
+    # 登錄並獲取 token
+    login_data = {"username": test_user_data["UserName"], "password": test_user_data["Password"]}
+    response = requests.post(f"{BASE_URL}/auth/token", data=login_data)
+    assert response.status_code == 200
+    tokens = response.json()
+    return tokens["access_token"]
 
-# def test_create_user_missing_fields(client):
-#     user_data = {
-#         "Email": "missingfields@example.com",
-#         # 缺少 UserName 和 Password
-#     }
-#     response = client.post("/users/", json=user_data)
-#     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-#     # 檢查缺少的字段
-#     errors = response.json()["detail"]
-#     assert any(error["loc"][-1] == "UserName" for error in errors)
-#     assert any(error["loc"][-1] == "Password" for error in errors)
+def test_create_user():
+    """測試創建用戶"""
+    response = requests.post(f"{BASE_URL}/users/", json=test_user_data)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["UserName"] == test_user_data["UserName"]
+    assert data["Email"] == test_user_data["Email"]
 
-# def test_create_user_invalid_email(client):
-#     user_data = {
-#         "Email": "invalidemail",  # 非法郵箱格式
-#         "UserName": "invalidemailuser",
-#         "FirstName": "Invalid",
-#         "LastName": "Email",
-#         "Password": "validpassword123"
-#     }
-#     response = client.post("/users/", json=user_data)
-#     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-#     assert response.json()["detail"][0]["msg"] == "value is not a valid email address"
+def test_read_user_me(token):
+    """測試獲取當前用戶資料"""
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(f"{BASE_URL}/users/me", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["UserName"] == test_user_data["UserName"]
+    assert data["Email"] == test_user_data["Email"]
+
+def test_update_user(token):
+    """測試更新用戶資料"""
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.patch(f"{BASE_URL}/users/me", json=updated_user_data, headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["FirstName"] == updated_user_data["FirstName"]
+    assert data["LastName"] == updated_user_data["LastName"]
+    assert data["Gender"] == updated_user_data["Gender"]
+
+def test_update_password(token):
+    """測試更新用戶密碼"""
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.patch(f"{BASE_URL}/users/me/password", json=password_update_data, headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["message"] == "密碼更新成功"
