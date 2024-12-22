@@ -35,19 +35,14 @@ services:
       # - ./mysql_data:/var/lib/mysql  # 掛載持久化數據
     # ports:
     #   - "3306:3306"
-  # tests:
-  #   build: .
-  #   container_name: fastapi_tests
-  #   command: bash -c "while !</dev/tcp/db/3306; do sleep 1; done; pytest --cov=app/tests --cov-report=term-missing"
-  #   environment:
-  #     - DATABASE_URL=mysql+pymysql://user:password@db:3306/mysql_db
-  #     - PYTHONPATH=/app # 這行很重要，不然pytest執行下去都會找不到app的module
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #     api:
-  #       condition: service_started
-  #   volumes:
-  #     - ./app:/app/app
-  #     - ./app/tests:/app/app/tests
-
+  simulate:
+    build: .
+    container_name: api_simulation
+    command: bash -c "while !</dev/tcp/db/3306; do sleep 1; done; python /app/api_simulation.py"
+    environment:
+      - DATABASE_URL=mysql+pymysql://user:password@db:3306/mysql_db
+    depends_on:
+      api:
+        condition: service_started
+    volumes:
+      - ./app:/app

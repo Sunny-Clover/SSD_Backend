@@ -1,6 +1,7 @@
 import requests
 
-BASE_URL = "http://localhost:8000"  # FastAPI 服務的 URL
+# BASE_URL = "http://localhost:8000"  # FastAPI 服務的 URL
+BASE_URL = "http://fastapi_app:8000"
 
 # 測試數據
 test_user_data = {
@@ -60,8 +61,8 @@ if __name__ == "__main__":
     print("\n3. Getting current user data...")
     get_current_user(token)
     
-    print("\n4. Updating user data...")
-    update_user(token)
+    # print("\n4. Updating user data...")
+    # update_user(token)
     
-    print("\n5. Updating password...")
-    update_password(token)
+    # print("\n5. Updating password...")
+    # update_password(token)
