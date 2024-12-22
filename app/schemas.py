@@ -38,7 +38,6 @@ class UserResponse(UserUpdatable):
     class Config:
         from_attributes = True
 
-# ==========以下還沒處理==========
 # 密碼更新模型
 class PasswordUpdate(BaseModel):
     current_password: str
@@ -57,7 +56,7 @@ class PasswordUpdate(BaseModel):
         return v
 
 
-
+# ==========以下還沒處理==========
 # 好友請求相關模型
 class FriendRequestBase(BaseModel):
     ReceiverID: int
@@ -113,38 +112,58 @@ class TokenPayload(BaseModel):
     sub: Optional[str] = None
 
 
-# 身體部位紀錄的基底模型
-class BodyPartBase(BaseModel):
-    PredictionCount: Optional[int] = 0
-    PartialScore: Optional[float] = 0.0
-
-
-class TorsoCreate(BodyPartBase):
+# region: [schema] Bodypart create
+class TorsoCreate(BaseModel):
     BackwardCount: int = 0
     ForwardCount: int = 0
     NeutralCount: int = 0
 
+    class Config:
+        from_attributes = True
 
-class FeetCreate(BodyPartBase):
+class FeetCreate(BaseModel):
     AnkleOnKneeCount: int = 0
     FlatCount: int = 0
 
+    class Config:
+        from_attributes = True
 
-class HeadCreate(BodyPartBase):
+class HeadCreate(BaseModel):
     BowedCount: int = 0
     NeutralCount: int = 0
     TiltBackCount: int = 0
 
+    class Config:
+        from_attributes = True
 
-class ShoulderCreate(BodyPartBase):
+class ShoulderCreate(BaseModel):
     HunchedCount: int = 0
     NeutralCount: int = 0
     ShrugCount: int = 0
 
+    class Config:
+        from_attributes = True
 
-class NeckCreate(BodyPartBase):
+class NeckCreate(BaseModel):
     ForwardCount: int = 0
     NeutralCount: int = 0
+
+    class Config:
+        from_attributes = True
+# endregion
+
+# region: [schema] Bodypart response 
+class TorsoResponse(TorsoCreate):
+    PartialScore: float
+class FeetResponse(FeetCreate):
+    PartialScore: float
+class HeadResponse(HeadCreate):
+    PartialScore: float
+class ShoulderResponse(ShoulderCreate):
+    PartialScore: float
+class NeckResponse(NeckCreate):
+    PartialScore: float
+# endregion
 
 
 # Detection API 的請求和回應模型
@@ -152,8 +171,7 @@ class DetectionBase(BaseModel):
     StartTime: datetime
     EndTime: datetime
     TotalTime: time
-    TotalPredictions: int
-
+    TotalPredictions: int    
 
 class DetectionCreate(DetectionBase):
     Torso: TorsoCreate
@@ -166,11 +184,12 @@ class DetectionCreate(DetectionBase):
 class DetectionResponse(DetectionBase):
     DetectionID: int
     UserID: int
-    Torso: TorsoCreate
-    Feet: FeetCreate
-    Head: HeadCreate
-    Shoulder: ShoulderCreate
-    Neck: NeckCreate
+    Score: float
+    Torso: TorsoResponse
+    Feet: FeetResponse
+    Head: HeadResponse
+    Shoulder: ShoulderResponse
+    Neck: NeckResponse
 
     class Config:
         from_attributes = True

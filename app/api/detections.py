@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.models import Detection, Torso, Feet, Head, Shoulder, Neck
 from app.schemas import UserResponse, DetectionCreate, DetectionResponse, TorsoCreate, FeetCreate, HeadCreate, ShoulderCreate, NeckCreate
@@ -7,114 +7,135 @@ from typing import List, Annotated
 
 router = APIRouter()
 
-@router.post("/", response_model=DetectionResponse)
-async def create_Detection(
-    Detection: DetectionCreate,
-    current_user: CurrentUser,
-    db: SessionDep
+@router.post("/", response_model=DetectionResponse, status_code=status.HTTP_201_CREATED)
+def create_detection(
+    detection_data: DetectionCreate,
+    db: SessionDep,
+    current_user: CurrentUser
 ):
-    new_Detection = Detection(
+    # 計算 PartialScore
+    def calculate_partial_score(correct_count, total_predictions):
+        return correct_count / total_predictions if total_predictions > 0 else 0.0
+
+    # 計算每個部位的 PartialScore
+    torso_score = calculate_partial_score(detection_data.Torso.NeutralCount, detection_data.TotalPredictions)
+    feet_score = calculate_partial_score(detection_data.Feet.FlatCount, detection_data.TotalPredictions)
+    head_score = calculate_partial_score(detection_data.Head.NeutralCount, detection_data.TotalPredictions)
+    shoulder_score = calculate_partial_score(detection_data.Shoulder.NeutralCount, detection_data.TotalPredictions)
+    neck_score = calculate_partial_score(detection_data.Neck.NeutralCount, detection_data.TotalPredictions)
+
+    # 計算 Detection Score
+    detection_score = (torso_score + feet_score + head_score + shoulder_score + neck_score) / 5.0
+
+    # 創建 Detection 記錄
+    new_detection = Detection(
         UserID=current_user.UserID,
-        StartTime=Detection.StartTime,
-        EndTime=Detection.EndTime,
-        TotalTime=Detection.TotalTime,
-        TotalPredictions=Detection.TotalPredictions
+        StartTime=detection_data.StartTime,
+        EndTime=detection_data.EndTime,
+        TotalTime=detection_data.TotalTime,
+        TotalPredictions=detection_data.TotalPredictions,
+        Score=detection_score
     )
-    try:
-        db.add(new_Detection)
-        db.commit()
-        db.refresh(new_Detection)
+    db.add(new_detection)
+    db.commit()
+    db.refresh(new_detection)
 
-        # 創建對應的部位紀錄
-        Torso = Torso(DetectionID=new_Detection.DetectionID, **Detection.Torso.dict())
-        feet = Feet(DetectionID=new_Detection.DetectionID, **Detection.Feet.dict())
-        head = Head(DetectionID=new_Detection.DetectionID, **Detection.Head.dict())
-        shoulder = Shoulder(DetectionID=new_Detection.DetectionID, **Detection.Shoulder.dict())
-        neck = Neck(DetectionID=new_Detection.DetectionID, **Detection.Neck.dict())
+    # 創建每個部位的紀錄
+    body_parts = {
+        "Torso": Torso(
+            DetectionID=new_detection.DetectionID,
+            BackwardCount=detection_data.Torso.BackwardCount,
+            ForwardCount=detection_data.Torso.ForwardCount,
+            NeutralCount=detection_data.Torso.NeutralCount,
+            PartialScore=torso_score
+        ),
+        "Feet": Feet(
+            DetectionID=new_detection.DetectionID,
+            AnkleOnKneeCount=detection_data.Feet.AnkleOnKneeCount,
+            FlatCount=detection_data.Feet.FlatCount,
+            PartialScore=feet_score
+        ),
+        "Head": Head(
+            DetectionID=new_detection.DetectionID,
+            BowedCount=detection_data.Head.BowedCount,
+            NeutralCount=detection_data.Head.NeutralCount,
+            TiltBackCount=detection_data.Head.TiltBackCount,
+            PartialScore=head_score
+        ),
+        "Shoulder": Shoulder(
+            DetectionID=new_detection.DetectionID,
+            HunchedCount=detection_data.Shoulder.HunchedCount,
+            NeutralCount=detection_data.Shoulder.NeutralCount,
+            ShrugCount=detection_data.Shoulder.ShrugCount,
+            PartialScore=shoulder_score
+        ),
+        "Neck": Neck(
+            DetectionID=new_detection.DetectionID,
+            ForwardCount=detection_data.Neck.ForwardCount,
+            NeutralCount=detection_data.Neck.NeutralCount,
+            PartialScore=neck_score
+        ),
+    }
 
-        db.add(Torso)
-        db.add(feet)
-        db.add(head)
-        db.add(shoulder)
-        db.add(neck)
-        db.commit()
-    except:
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to create Detection")
+    # 新增部位資料到資料庫
+    for part in body_parts.values():
+        db.add(part)
     
-    return DetectionResponse(
-        DetectionID=new_Detection.DetectionID,
-        UserID=new_Detection.UserID,
-        TotalPredictions=new_Detection.TotalPredictions,
-        StartTime=str(new_Detection.StartTime),  # 轉換為字串
-        EndTime=str(new_Detection.EndTime),      # 轉換為字串
-        TotalTime=str(new_Detection.TotalTime),  # 轉換為字串
-        Torso=Detection.Torso,                         # 確保這些欄位存在
-        Feet=Detection.Feet,
-        Head=Detection.Head,
-        Shoulder=Detection.Shoulder,
-        Neck=Detection.Neck,
+    db.commit()
+    db.refresh(new_detection)
+
+    # TODO: 只能先這樣，還找不到解決Pydantic不能轉換nested的原因，我覺得可能是因為Detection的head是Relationship
+    detection_response = DetectionResponse(
+        **new_detection.dict(),
+        Head = new_detection.head,
+        Neck = new_detection.neck,
+        Shoulder = new_detection.shoulder,
+        Torso = new_detection.torso,
+        Feet = new_detection.feet,
     )
+    return detection_response
 
+# 保留：還需要測試一下
 @router.get("/", response_model=List[DetectionResponse])
-async def get_Detections(
-    current_user: CurrentUser,
-    db: SessionDep
+def get_detections(
+    db: SessionDep,
+    current_user: CurrentUser
 ):
-    Detections = db.query(Detection).filter(Detection.UserID == current_user.UserID).all()
-    responses = []
-    for Detection in Detections:
-        Torso = db.query(Torso).filter(Torso.DetectionID == Detection.DetectionID).first()
-        feet = db.query(Feet).filter(Feet.DetectionID == Detection.DetectionID).first()
-        head = db.query(Head).filter(Head.DetectionID == Detection.DetectionID).first()
-        shoulder = db.query(Shoulder).filter(Shoulder.DetectionID == Detection.DetectionID).first()
-        neck = db.query(Neck).filter(Neck.DetectionID == Detection.DetectionID).first()
-        responses.append(DetectionResponse(
-            DetectionID=Detection.DetectionID,
-            UserID=Detection.UserID,
-            StartTime=str(Detection.StartTime),
-            EndTime=str(Detection.EndTime),
-            TotalTime=str(Detection.TotalTime),
-            TotalPredictions=Detection.TotalPredictions,
-            Torso=TorsoCreate.from_orm(Torso) if Torso else TorsoCreate(),
-            Feet=FeetCreate.from_orm(feet) if feet else FeetCreate(),
-            Head=HeadCreate.from_orm(head) if head else HeadCreate(),
-            Shoulder=ShoulderCreate.from_orm(shoulder) if shoulder else ShoulderCreate(),
-            Neck=NeckCreate.from_orm(neck) if neck else NeckCreate()
+    detections = db.query(Detection).filter(Detection.UserID == current_user.UserID).all()
+    deteciton_response = []
+    for detection in detections:
+        deteciton_response.append(DetectionResponse(
+            **detection.dict(),
+            Head = detection.head,
+            Neck = detection.neck,
+            Shoulder = detection.shoulder,
+            Torso = detection.torso,
+            Feet = detection.feet,
         ))
-    return responses
+    return deteciton_response
 
-@router.get("/{Detection_id}", response_model=DetectionResponse)
+
+@router.get("/{detection_id}", response_model=DetectionResponse)
 async def get_Detection(
-    Detection_id: int,
+    detection_id: int,
     current_user: CurrentUser,
     db: SessionDep
 ):
-    Detection = db.query(Detection).filter(Detection.DetectionID == Detection_id, Detection.UserID == current_user.UserID).first()
-    if not Detection:
+    detection = db.query(Detection).filter(Detection.DetectionID == detection_id, Detection.UserID == current_user.UserID).first()
+    
+    if not detection:
         raise HTTPException(status_code=404, detail="Detection not found")
 
-    # 獲取對應的部位資料
-    Torso = db.query(Torso).filter(Torso.DetectionID == Detection_id).first()
-    feet = db.query(Feet).filter(Feet.DetectionID == Detection_id).first()
-    head = db.query(Head).filter(Head.DetectionID == Detection_id).first()
-    shoulder = db.query(Shoulder).filter(Shoulder.DetectionID == Detection_id).first()
-    neck = db.query(Neck).filter(Neck.DetectionID == Detection_id).first()
-
     return DetectionResponse(
-        DetectionID=Detection.DetectionID,
-        UserID=Detection.UserID,
-        StartTime=str(Detection.StartTime),
-        EndTime=str(Detection.EndTime),
-        TotalTime=str(Detection.TotalTime),
-        TotalPredictions=Detection.TotalPredictions,
-        Torso=TorsoCreate.from_orm(Torso),
-        Feet=FeetCreate.from_orm(feet),
-        Head=HeadCreate.from_orm(head),
-        Shoulder=ShoulderCreate.from_orm(shoulder),
-        Neck=NeckCreate.from_orm(neck)
-    )
-
+                **detection.dict(),
+                Head = detection.head,
+                Neck = detection.neck,
+                Shoulder = detection.shoulder,
+                Torso = detection.torso,
+                Feet = detection.feet
+                )
+# region: [API] put and delete not avaliable now
+'''
 @router.put("/{Detection_id}", response_model=DetectionResponse)
 async def update_Detection(
     Detection_id: int,
@@ -185,3 +206,5 @@ async def delete_Detection(
         raise HTTPException(status_code=500, detail="Failed to delete Detection")
     
     return {"detail": "Detection deleted successfully"}
+'''
+# endregion 

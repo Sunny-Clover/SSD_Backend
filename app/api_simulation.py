@@ -21,6 +21,36 @@ password_update_data = {
     "confirm_password": "newpassword456"
 }
 
+test_detection_data = {
+  "StartTime": "2024-12-22T09:40:14.883Z",
+  "EndTime": "2024-12-22T09:40:14.883Z",
+  "TotalTime": "09:40:14.883Z",
+  "TotalPredictions": 10,
+  "Torso": {
+    "BackwardCount": 0,
+    "ForwardCount": 0,
+    "NeutralCount": 10
+  },
+  "Feet": {
+    "AnkleOnKneeCount": 5,
+    "FlatCount": 5
+  },
+  "Head": {
+    "BowedCount": 2,
+    "NeutralCount": 3,
+    "TiltBackCount": 5
+  },
+  "Shoulder": {
+    "HunchedCount": 2,
+    "NeutralCount": 3,
+    "ShrugCount": 5
+  },
+  "Neck": {
+    "ForwardCount": 2,
+    "NeutralCount": 8
+  }
+}
+
 def create_user():
     response = requests.post(f"{BASE_URL}/users/", json=test_user_data)
     print("Create User Response:", response.json())
@@ -50,6 +80,12 @@ def update_password(token):
     print("Update Password Response:", response.json())
     return response
 
+def create_detection(token):
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.post(f"{BASE_URL}/detections/", json=test_detection_data, headers=headers)
+    print("Create Detection Response:", response.json())
+    return response
+
 if __name__ == "__main__":
     print("1. Creating user...")
     create_user()
@@ -65,3 +101,6 @@ if __name__ == "__main__":
     
     # print("\n5. Updating password...")
     # update_password(token)
+
+    print("\n6. Creating detection...")
+    create_detection(token)
