@@ -135,7 +135,7 @@ def get_detections(
 
 
 @router.get("/{detection_id}", response_model=DetectionResponse)
-async def get_Detection(
+def get_Detection(
     detection_id: int,
     current_user: CurrentUser,
     db: SessionDep
@@ -156,7 +156,7 @@ async def get_Detection(
 # region: [API] put and delete not avaliable now
 '''
 @router.put("/{Detection_id}", response_model=DetectionResponse)
-async def update_Detection(
+def update_Detection(
     Detection_id: int,
     Detection: DetectionCreate,
     current_user: CurrentUser,
@@ -202,7 +202,7 @@ async def update_Detection(
     )
 
 @router.delete("/{Detection_id}", response_model=dict)
-async def delete_Detection(
+def delete_Detection(
     Detection_id: int,
     current_user: CurrentUser,
     db: SessionDep
