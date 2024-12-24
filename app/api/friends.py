@@ -1,119 +1,142 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from app.models import User, FriendList, FriendRequest
-from app.schemas import UserResponse, FriendRequestCreate, FriendRequestResponse, SuccessMessage, FriendRequestAction
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from app.models import User, FriendList, FriendRequest, StatusEnum
+from app.schemas import UserResponse, FriendRequestCreate, FriendRequestResponse, FriendRequestSentResponse, FriendRequestReceivedResponse, SuccessMessage, FriendRequestAction
 from app.api.deps import get_current_user
 from app.api.deps import CurrentUser, SessionDep
 from typing import List, Annotated
+from enum import Enum
 
 router = APIRouter()
+
 
 @router.get("/", response_model=List[UserResponse])
 async def get_friends_list(
     current_user: CurrentUser,
     db: SessionDep
 ):
-    friends = db.query(User).join(FriendList, (FriendList.UserID1 == User.UserID) | (FriendList.UserID2 == User.UserID))\
-        .filter(
-            ((FriendList.UserID1 == current_user.UserID) | (FriendList.UserID2 == current_user.UserID)) &
-            (FriendList.Status == 'Accepted') &
-            (User.UserID != current_user.UserID)
-        ).all()
+    friends = db.query(User)\
+                .join(FriendList, FriendList.UserID2 == User.UserID)\
+                .filter(FriendList.UserID1 == current_user.UserID)\
+                .all()
 
-    return [UserResponse.from_orm(friend) for friend in friends]
+    return friends
 
-@router.post("/request", response_model=SuccessMessage)
+@router.post("/requests", response_model=SuccessMessage)
 async def send_friend_request(
     request: FriendRequestCreate,
     current_user: CurrentUser,
     db: SessionDep
 ):
+    # 不能加自己好友
+    if request.ReceiverID == current_user.UserID:
+        raise HTTPException(status_code=404, detail="不能加自己好友")
     # 檢查接收者是否存在
     receiver = db.query(User).filter(User.UserID == request.ReceiverID).first()
     if not receiver:
-        raise HTTPException(status_code=404, detail="接收者不存在")
+        raise HTTPException(status_code=404, detail="該用戶不存在")
 
     # 檢查是否已經是好友
-    existing_friendship = db.query(FriendList).filter(
-        ((FriendList.UserID1 == current_user.UserID) & (FriendList.UserID2 == request.ReceiverID)) |
-        ((FriendList.UserID1 == request.ReceiverID) & (FriendList.UserID2 == current_user.UserID))
-    ).first()
+    existing_friendship = db.query(FriendList) \
+                            .filter(
+                                (FriendList.UserID1 == current_user.UserID) &
+                                (FriendList.UserID2 == request.ReceiverID)
+                            ).first()
     if existing_friendship:
-        raise HTTPException(status_code=400, detail="已經是好友")
+        raise HTTPException(status_code=400, detail="已成為好友")
 
     # 檢查是否已經發送過請求
     existing_request = db.query(FriendRequest).filter(
         (FriendRequest.SenderID == current_user.UserID) &
         (FriendRequest.ReceiverID == request.ReceiverID)
     ).first()
+    # TODO: 這邊應該要給前端一隻檢核的API，然後判斷是不是可以重新請求
     if existing_request:
-        raise HTTPException(status_code=400, detail="已經發送過好友請求")
+        raise HTTPException(status_code=400, detail="已發送過好友請求")
 
     # 創建新的好友請求
     new_request = FriendRequest(
         SenderID=current_user.UserID,
-        ReceiverID=request.ReceiverID
+        ReceiverID=request.ReceiverID,
+        Status=StatusEnum.Pending
     )
     db.add(new_request)
     db.commit()
 
     return SuccessMessage(message="好友請求已發送")
 
-@router.get("/requests", response_model=List[FriendRequestResponse])
-async def get_friend_requests(
+@router.get("/requests/received", response_model=List[FriendRequestReceivedResponse])
+async def get_received_friend_requests(
     current_user: CurrentUser,
-    db: SessionDep,
-    request_type: str = Query(..., description="請求類型：'received' 或 'sent'")
+    db: SessionDep
 ):
-    if request_type not in ['received', 'sent']:
-        raise HTTPException(status_code=400, detail="無效的請求類型")
-
-    query = db.query(FriendRequest, User.UserName)
+    received_requests = db.query(
+        FriendRequest.RequestID,
+        FriendRequest.SenderID,
+        User.UserName.label("SenderUserName"),
+        FriendRequest.Status,
+        FriendRequest.RequestDate
+    ).join(User, User.UserID == FriendRequest.SenderID)\
+     .filter(FriendRequest.ReceiverID == current_user.UserID)\
+     .all()
     
-    if request_type == 'received':  # JOIN並取出sender的username
-        query = query.join(User, FriendRequest.SenderID == User.UserID)\
-            .filter(FriendRequest.ReceiverID == current_user.UserID)
-    else:  # JOIN並取出receiver的username
-        query = query.join(User, FriendRequest.ReceiverID == User.UserID)\
-            .filter(FriendRequest.SenderID == current_user.UserID)
+    return received_requests
+
+@router.get("/requests/sent", response_model=List[FriendRequestSentResponse])
+async def get_sent_friend_requests(
+    current_user: CurrentUser,
+    db: SessionDep
+):
+    sent_requests = db.query(
+        FriendRequest.RequestID,
+        FriendRequest.ReceiverID,
+        User.UserName.label("ReceiverUserName"),
+        FriendRequest.Status,
+        FriendRequest.RequestDate
+    ).join(User, User.UserID == FriendRequest.ReceiverID)\
+     .filter(FriendRequest.SenderID == current_user.UserID)\
+     .all()
     
-    requests = query.filter(FriendRequest.Status == 'Pending').all()
+    return sent_requests
 
-    return [
-        FriendRequestResponse(
-            RequestID=req.RequestID,
-            SenderID=req.SenderID,
-            SenderUserName=current_user.UserName if request_type == 'sent' else username,
-            ReceiverID=req.ReceiverID,
-            ReceiverUserName=username if request_type == 'sent' else current_user.UserName,
-            Status=req.Status,
-            RequestDate=str(req.RequestDate)
-        ) for req, username in requests
-    ]
-
-@router.post("/requests/{request_id}/action", response_model=SuccessMessage)
+@router.patch("/requests/{id}", response_model=SuccessMessage)
 async def handle_friend_request(
-    request_id: int,
+    id: int,
     action: FriendRequestAction,
     current_user: CurrentUser,
     db: SessionDep
 ):
+    # 1. 查詢該好友請求
     friend_request = db.query(FriendRequest).filter(
-        FriendRequest.RequestID == request_id,
-        FriendRequest.ReceiverID == current_user.UserID,
-        FriendRequest.Status == 'Pending'
+        FriendRequest.RequestID == id,
+        FriendRequest.ReceiverID == current_user.UserID  # 確保當前用戶是接收者
     ).first()
 
     if not friend_request:
-        raise HTTPException(status_code=404, detail="好友請求不存在或已處理")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="好友邀請不存在或無權處理"
+        )
 
-    if action.Action == 'accept':
-        friend_request.Status = 'Accepted'
-        message = "好友請求已接受"
-    elif action.Action == 'decline':
-        friend_request.Status = 'Declined'
-        message = "好友請求已拒絕"
+    if friend_request.Status != "Pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="好友邀請已處理"
+        )
+
+    # 2. 根據動作執行對應操作
+    if action.Action == "Accept":
+        friend_request.Status = "Accepted"
+        # 加到好友清單
+        db.add(FriendList(UserID1=current_user.UserID, UserID2=friend_request.SenderID))
+        db.add(FriendList(UserID1=friend_request.SenderID, UserID2=current_user.UserID))
+    elif action.Action == "Reject":
+        friend_request.Status = "Declined"
     else:
-        raise HTTPException(status_code=400, detail="無效的操作")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="無效的操作"
+        )
 
     db.commit()
-    return SuccessMessage(message=message)
+
+    return SuccessMessage(message=f"好友請求已{action.Action.lower()}")

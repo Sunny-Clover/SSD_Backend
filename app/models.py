@@ -48,7 +48,7 @@ class User(UserBase, TimestampMixin, table=True):
 
     detections: List["Detection"] = Relationship(back_populates="user")
 
-# FriendList 表
+# FriendList 表 (Create two row for every friend relationship)
 class FriendList(TimestampMixin, table=True):
     FriendID: Optional[int] = Field(default=None, primary_key=True)
     UserID1: int = Field(nullable=False)
