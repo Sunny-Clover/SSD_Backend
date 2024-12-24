@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[UserResponse])
-async def get_friends_list(
+def get_friends_list(
     current_user: CurrentUser,
     db: SessionDep
 ):
@@ -22,7 +22,7 @@ async def get_friends_list(
     return friends
 
 @router.post("/requests", response_model=SuccessMessage)
-async def send_friend_request(
+def send_friend_request(
     request: FriendRequestCreate,
     current_user: CurrentUser,
     db: SessionDep
@@ -65,7 +65,7 @@ async def send_friend_request(
     return SuccessMessage(message="好友請求已發送")
 
 @router.get("/requests/received", response_model=List[FriendRequestReceivedResponse])
-async def get_received_friend_requests(
+def get_received_friend_requests(
     current_user: CurrentUser,
     db: SessionDep
 ):
@@ -82,7 +82,7 @@ async def get_received_friend_requests(
     return received_requests
 
 @router.get("/requests/sent", response_model=List[FriendRequestSentResponse])
-async def get_sent_friend_requests(
+def get_sent_friend_requests(
     current_user: CurrentUser,
     db: SessionDep
 ):
@@ -99,7 +99,7 @@ async def get_sent_friend_requests(
     return sent_requests
 
 @router.patch("/requests/{id}", response_model=SuccessMessage)
-async def handle_friend_request(
+def handle_friend_request(
     id: int,
     action: FriendRequestAction,
     current_user: CurrentUser,
