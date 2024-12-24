@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, validator
 from typing import Optional, List
 from datetime import time, datetime
 from .models import GenderEnum, StatusEnum
+from enum import Enum
 
 
 # 基底模型：用於共享欄位
@@ -60,13 +61,28 @@ class PasswordUpdate(BaseModel):
 
 # ==========以下還沒處理==========
 # 好友請求相關模型
-class FriendRequestBase(BaseModel):
+class FriendRequestCreate(BaseModel):
     ReceiverID: int
 
+class FriendRequestSentResponse(BaseModel):
+    RequestID: int
+    ReceiverID: int
+    ReceiverUserName: str
+    Status: StatusEnum
+    RequestDate: datetime
 
-class FriendRequestCreate(FriendRequestBase):
-    pass
+    class Config:
+        from_attributes = True
 
+class FriendRequestReceivedResponse(BaseModel):
+    RequestID: int
+    SenderID: int
+    SenderUserName: str
+    Status: StatusEnum
+    RequestDate: datetime
+
+    class Config:
+        from_attributes = True
 
 class FriendRequestResponse(BaseModel):
     RequestID: int
@@ -80,9 +96,12 @@ class FriendRequestResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class RequestAction(str, Enum):
+    Accept = 'Accept'
+    Reject = 'Reject'
 
 class FriendRequestAction(BaseModel):
-    Action: StatusEnum  # 'Pending', 'Accepted', 'Declined'
+    Action: RequestAction  # 指定 
 
 
 # 好友列表相關模型
