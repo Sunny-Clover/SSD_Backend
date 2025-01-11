@@ -37,6 +37,7 @@ class UserResponse(UserUpdatable):
     UserName: str
     TotalPredictionCount: int
     TotalDetectionTime: time
+    AllTimeScore: float
 
     class Config:
         from_attributes = True
@@ -128,6 +129,9 @@ class TokenResponse(BaseModel):
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
+class RefreshTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
@@ -138,6 +142,7 @@ class TorsoCreate(BaseModel):
     BackwardCount: int = 0
     ForwardCount: int = 0
     NeutralCount: int = 0
+    AmbiguousCount: int = 0
 
     class Config:
         from_attributes = True
@@ -145,6 +150,7 @@ class TorsoCreate(BaseModel):
 class FeetCreate(BaseModel):
     AnkleOnKneeCount: int = 0
     FlatCount: int = 0
+    AmbiguousCount: int = 0
 
     class Config:
         from_attributes = True
@@ -153,6 +159,7 @@ class HeadCreate(BaseModel):
     BowedCount: int = 0
     NeutralCount: int = 0
     TiltBackCount: int = 0
+    AmbiguousCount: int = 0
 
     class Config:
         from_attributes = True
@@ -161,6 +168,7 @@ class ShoulderCreate(BaseModel):
     HunchedCount: int = 0
     NeutralCount: int = 0
     ShrugCount: int = 0
+    AmbiguousCount: int = 0
 
     class Config:
         from_attributes = True
@@ -168,6 +176,7 @@ class ShoulderCreate(BaseModel):
 class NeckCreate(BaseModel):
     ForwardCount: int = 0
     NeutralCount: int = 0
+    AmbiguousCount: int = 0
 
     class Config:
         from_attributes = True

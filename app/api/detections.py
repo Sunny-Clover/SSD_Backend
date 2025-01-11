@@ -48,12 +48,14 @@ def create_detection(
             BackwardCount=detection_data.Torso.BackwardCount,
             ForwardCount=detection_data.Torso.ForwardCount,
             NeutralCount=detection_data.Torso.NeutralCount,
+            AmbiguousCount=detection_data.Torso.AmbiguousCount,
             PartialScore=torso_score
         ),
         "Feet": Feet(
             DetectionID=new_detection.DetectionID,
             AnkleOnKneeCount=detection_data.Feet.AnkleOnKneeCount,
             FlatCount=detection_data.Feet.FlatCount,
+            AmbiguousCount=detection_data.Torso.AmbiguousCount,
             PartialScore=feet_score
         ),
         "Head": Head(
@@ -61,6 +63,7 @@ def create_detection(
             BowedCount=detection_data.Head.BowedCount,
             NeutralCount=detection_data.Head.NeutralCount,
             TiltBackCount=detection_data.Head.TiltBackCount,
+            AmbiguousCount=detection_data.Torso.AmbiguousCount,
             PartialScore=head_score
         ),
         "Shoulder": Shoulder(
@@ -68,12 +71,14 @@ def create_detection(
             HunchedCount=detection_data.Shoulder.HunchedCount,
             NeutralCount=detection_data.Shoulder.NeutralCount,
             ShrugCount=detection_data.Shoulder.ShrugCount,
+            AmbiguousCount=detection_data.Torso.AmbiguousCount,
             PartialScore=shoulder_score
         ),
         "Neck": Neck(
             DetectionID=new_detection.DetectionID,
             ForwardCount=detection_data.Neck.ForwardCount,
             NeutralCount=detection_data.Neck.NeutralCount,
+            AmbiguousCount=detection_data.Torso.AmbiguousCount,
             PartialScore=neck_score
         ),
     }

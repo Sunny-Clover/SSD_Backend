@@ -137,6 +137,7 @@ class Head(BodyPartMixin, table=True):
     BowedCount: Optional[int] = Field(default=0)
     NeutralCount: Optional[int] = Field(default=0)
     TiltBackCount: Optional[int] = Field(default=0)
+    AmbiguousCount: Optional[int] = Field(default=0)
 
     detection: Optional[Detection] = Relationship(back_populates="head")
 
@@ -152,6 +153,7 @@ class Neck(BodyPartMixin, table=True):
     )
     ForwardCount: Optional[int] = Field(default=0)
     NeutralCount: Optional[int] = Field(default=0)
+    AmbiguousCount: Optional[int] = Field(default=0)
 
     detection: Optional[Detection] = Relationship(back_populates="neck")
 
@@ -168,6 +170,7 @@ class Shoulder(BodyPartMixin, table=True):
     HunchedCount: Optional[int] = Field(default=0)
     NeutralCount: Optional[int] = Field(default=0)
     ShrugCount: Optional[int] = Field(default=0)
+    AmbiguousCount: Optional[int] = Field(default=0)
 
     detection: Optional[Detection] = Relationship(back_populates="shoulder")
 
@@ -184,6 +187,7 @@ class Torso(BodyPartMixin, table=True):
     BackwardCount: Optional[int] = Field(default=0)
     ForwardCount: Optional[int] = Field(default=0)
     NeutralCount: Optional[int] = Field(default=0)
+    AmbiguousCount: Optional[int] = Field(default=0)
 
     detection: Optional[Detection] = Relationship(back_populates="torso")
 
@@ -199,5 +203,6 @@ class Feet(BodyPartMixin, table=True):
     )
     AnkleOnKneeCount: Optional[int] = Field(default=0)
     FlatCount: Optional[int] = Field(default=0)
+    AmbiguousCount: Optional[int] = Field(default=0)
 
     detection: Optional[Detection] = Relationship(back_populates="feet")

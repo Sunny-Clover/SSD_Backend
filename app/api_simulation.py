@@ -25,61 +25,71 @@ password_update_data = {
 
 test_detection_data = {
   "StartTime": "2024-12-22T09:40:14.883Z",
-  "EndTime": "2024-12-22T09:40:24.883Z",
-  "TotalTime": "00:00:10.0Z",
-  "TotalPredictions": 10,
+  "EndTime": "2024-12-22T09:40:34.883Z",
+  "TotalTime": "00:00:20.0Z",
+  "TotalPredictions": 20,
   "Torso": {
     "BackwardCount": 0,
     "ForwardCount": 0,
-    "NeutralCount": 10
+    "NeutralCount": 10,
+    "AmbiguousCount": 10
   },
   "Feet": {
     "AnkleOnKneeCount": 5,
-    "FlatCount": 5
+    "FlatCount": 5,
+    "AmbiguousCount": 10
   },
   "Head": {
     "BowedCount": 2,
     "NeutralCount": 3,
-    "TiltBackCount": 5
+    "TiltBackCount": 5,
+    "AmbiguousCount": 10
   },
   "Shoulder": {
     "HunchedCount": 2,
     "NeutralCount": 3,
-    "ShrugCount": 5
+    "ShrugCount": 5,
+    "AmbiguousCount": 10
   },
   "Neck": {
     "ForwardCount": 2,
-    "NeutralCount": 8
+    "NeutralCount": 8,
+    "AmbiguousCount": 10
   }
 }
 
 test_detection_data2 = {
     "StartTime": "2024-12-22T17:32:42",
-    "EndTime": "2024-12-22T17:34:22",
-    "TotalTime": "00:01:40",
-    "TotalPredictions": 100,
+    "EndTime": "2024-12-22T17:34:32",
+    "TotalTime": "00:01:50",
+    "TotalPredictions": 110,
     "Torso": {
         "BackwardCount": 10,
         "ForwardCount": 20,
-        "NeutralCount": 70
+        "NeutralCount": 70,
+        "AmbiguousCount": 10
     },
     "Feet": {
         "AnkleOnKneeCount": 5,
-        "FlatCount": 95
+        "FlatCount": 95,
+        "AmbiguousCount": 10
     },
     "Head": {
         "BowedCount": 15,
         "NeutralCount": 80,
-        "TiltBackCount": 5
+        "TiltBackCount": 5,
+        "AmbiguousCount": 10
     },
     "Shoulder": {
         "HunchedCount": 10,
         "NeutralCount": 85,
-        "ShrugCount": 5
+        "ShrugCount": 5,
+        "AmbiguousCount": 10
     },
     "Neck": {
         "ForwardCount": 20,
-        "NeutralCount": 80
+        "NeutralCount": 80,
+        "AmbiguousCount": 10
     }
 }
 
