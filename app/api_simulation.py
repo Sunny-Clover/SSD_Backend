@@ -5,8 +5,8 @@ BASE_URL = "http://localhost:8000"  # FastAPI 服務的 URL
 # 測試數據
 test_user_datas = [
     {
-    "UserName": f"user{x}",
-    "Email": f"user{x}@example.com",
+    "UserName": f"user{x+1}",
+    "Email": f"user{x+1}@example.com",
     "Password": "123123123"
     } for x in range(10)
 ]
@@ -132,6 +132,40 @@ def create_detection(token, detection_data, is_print=False):
         print("Create Detection Response:", response.json())
     return response
 
+def create_friend_request(token, receiverId, is_print=False):
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.post(
+        f"{BASE_URL}/friends/requests",
+        json={"ReceiverID": receiverId},
+        headers=headers
+    )
+    if is_print:
+        print("Create Friend Request Response:", response.json())
+    return response
+
+
+def accept_friend_request(token, is_print=False):
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = requests.get(f"{BASE_URL}/friends/requests/received/", headers=headers)
+    if response.status_code != 200:
+        print(f"Failed to fetch friend requests: {response.status_code}, {response.text}")
+        return
+    friend_requests = response.json()
+    for req in friend_requests:
+        user_id = req.get("RequestID")
+        if not user_id:
+            print(f"Skipping invalid request: {req}")
+            continue
+        accept_response = requests.patch(
+            f"{BASE_URL}/friends/requests/{user_id}",
+            json={"Action": "Accept"},
+            headers=headers
+        )
+        if is_print:
+            print("Accept Friend Request Response:", accept_response.json())
+
+
 if __name__ == "__main__":
     print("\nCreating user...")
     for user_data in test_user_datas:
@@ -155,3 +189,11 @@ if __name__ == "__main__":
     print("\nCreating detection...")
     for idx, user_data in enumerate(test_user_datas):
         create_detection(tokens[idx], test_detection_data2)
+
+    print("\nSend friend request to user0(id=0) ...")
+    for idx, user_data in enumerate(test_user_datas):
+        create_friend_request(token=tokens[idx], receiverId=1)
+
+    print("\nAccept friend request to user0(id=0) ...")
+    accept_friend_request(token=tokens[0])
+    
