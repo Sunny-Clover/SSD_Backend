@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models import User
@@ -6,10 +7,15 @@ from app.schemas import UserRegister, UserUpdate, UserResponse, PasswordUpdate, 
 from app.core.security import get_password_hash, verify_password
 from app.api.deps import CurrentUser, SessionDep
 from app.core.bll import calculate_user_level, calculate_user_level_progress, time_to_minutes
+from pathlib import Path
+import shutil
 
 from typing import Annotated
 
 router = APIRouter()
+
+BASE_IMAGE_DIR = Path("images").resolve()
+BASE_IMAGE_DIR.mkdir(parents=True, exist_ok=True)  # 確保目錄存在
 
 @router.post("/", response_model=ExtendedUserResponse)
 def create_user(user: UserRegister, db: SessionDep):
@@ -88,6 +94,55 @@ def update_password(
 def read_users_me(current_user: CurrentUser, db: SessionDep):
     return get_userDTO(db, current_user)
 
+@router.post("/avatar")
+def upload_photo(current_user: CurrentUser, file: UploadFile, db: SessionDep):
+    # 檢查使用者是否存在
+    db_user = db.query(User).filter(User.UserID == current_user.UserID).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="用戶未找到")
+
+    # 檢查檔案類型
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Invalid file type, only images are allowed")
+
+    # 生成照片檔名
+    photo_filename = f"avatar_{db_user.UserID}"
+    photo_path = BASE_IMAGE_DIR / photo_filename
+
+    # 儲存檔案
+    with photo_path.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # 更新使用者的照片檔名
+    db_user.PhotoUrl = photo_filename
+    db.commit()
+
+    return {"message": "Photo uploaded successfully", "filename": photo_filename}
+
+@router.get("/avatar")
+def get_image(current_user: CurrentUser, db: SessionDep):
+    # 檢查使用者是否存在
+    db_user = db.query(User).filter(User.UserID == current_user.UserID).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="用戶未找到")
+    # 確保傳入的文件名安全
+    try:
+        sanitized_path = Path(db_user.PhotoUrl).name  # 僅保留檔名，移除路徑
+        image_path = BASE_IMAGE_DIR / sanitized_path
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid image name")
+
+    # 確保文件在指定的 BASE_IMAGE_DIR 內
+    if not image_path.resolve().is_relative_to(BASE_IMAGE_DIR):
+        raise HTTPException(status_code=400, detail="Invalid image path")
+
+    # 檢查檔案是否存在
+    if not image_path.exists() or not image_path.is_file():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    return FileResponse(image_path)
+
+# region: depencies functions
 def get_userDTO(db: Session, user: User) -> ExtendedUserResponse:
     user_dict = user.dict()
 
@@ -118,3 +173,5 @@ def compute_user_percentile_rank(db: Session, user: User) -> float:
     
     pr = (count_lte / count_all) * 100
     return pr
+
+# endregion
