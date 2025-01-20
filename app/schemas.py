@@ -42,6 +42,12 @@ class UserResponse(UserUpdatable):
     class Config:
         from_attributes = True
 
+class ExtendedUserResponse(UserResponse):
+    # 前端需要的衍生欄位
+    PR: float
+    Level: int
+    LevelProgress: float
+
 # 密碼更新模型
 class PasswordUpdate(BaseModel):
     current_password: str
@@ -59,8 +65,6 @@ class PasswordUpdate(BaseModel):
             raise ValueError('Password must be between 8 and 40 characters')
         return v
 
-
-# ==========以下還沒處理==========
 # 好友請求相關模型
 class FriendRequestCreate(BaseModel):
     ReceiverID: int
@@ -118,6 +122,13 @@ class FriendListResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class LeaderboardResponse(BaseModel):
+    UserID: int
+    Name: str
+    Rank: int
+    Level: int
+    Progress: float
+    AllTimeScore: float
 
 # 認證相關模型
 class TokenResponse(BaseModel):

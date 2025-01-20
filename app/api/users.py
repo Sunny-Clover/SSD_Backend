@@ -1,15 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import text
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 from app.models import User
-from app.schemas import UserRegister, UserUpdate, UserResponse, PasswordUpdate, SuccessMessage
+from app.schemas import UserRegister, UserUpdate, UserResponse, PasswordUpdate, SuccessMessage, ExtendedUserResponse
 from app.core.security import get_password_hash, verify_password
 from app.api.deps import CurrentUser, SessionDep
+from app.core.bll import calculate_user_level, calculate_user_level_progress, time_to_minutes
 
 from typing import Annotated
 
 router = APIRouter()
 
-@router.post("/", response_model=UserResponse)
+@router.post("/", response_model=ExtendedUserResponse)
 def create_user(user: UserRegister, db: SessionDep):
     # 檢查郵箱是否已經存在
     db_user = db.query(User).filter(User.Email == user.Email).first()
@@ -33,7 +35,7 @@ def create_user(user: UserRegister, db: SessionDep):
     
     return new_user
 
-@router.patch("/me", response_model=UserResponse)
+@router.patch("/me", response_model=ExtendedUserResponse)
 def update_user(user: UserUpdate, current_user: CurrentUser, db: SessionDep):
     db_user = db.query(User).filter(User.UserID == current_user.UserID).first()
     if not db_user:
@@ -51,7 +53,7 @@ def update_user(user: UserUpdate, current_user: CurrentUser, db: SessionDep):
     db.commit()
     db.refresh(db_user)
 
-    return db_user
+    return get_userDTO(db, db_user)
 
 @router.patch("/me/password", response_model=SuccessMessage)
 def update_password(
@@ -82,6 +84,37 @@ def update_password(
     
     return SuccessMessage(message="密碼更新成功")
 
-@router.get("/me", response_model=UserResponse)
-def read_users_me(current_user: CurrentUser):
-    return current_user
+@router.get("/me", response_model=ExtendedUserResponse)
+def read_users_me(current_user: CurrentUser, db: SessionDep):
+    return get_userDTO(db, current_user)
+
+def get_userDTO(db: Session, user: User) -> ExtendedUserResponse:
+    user_dict = user.dict()
+
+    pr = compute_user_percentile_rank(db, user)
+
+    # Core transfer logic
+    total_minutes = time_to_minutes(user.TotalDetectionTime)
+    level = calculate_user_level(total_minutes)
+    progress = calculate_user_level_progress(total_minutes, level)
+
+    return ExtendedUserResponse(
+        **user_dict,
+        PR=pr,
+        Level=level,
+        LevelProgress=progress,
+    )
+
+def compute_user_percentile_rank(db: Session, user: User) -> float:
+    user_score = user.AllTimeScore or 0.0
+
+    # <= user_score
+    count_lte = db.query(func.count(User.UserID)).filter(User.AllTimeScore <= user_score).scalar()
+    # 全部人數
+    count_all = db.query(func.count(User.UserID)).scalar()
+
+    if not count_all:
+        return 0.0
+    
+    pr = (count_lte / count_all) * 100
+    return pr

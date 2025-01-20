@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.models import User, FriendList, FriendRequest, StatusEnum
-from app.schemas import UserResponse, FriendRequestCreate, FriendRequestResponse, FriendRequestSentResponse, FriendRequestReceivedResponse, SuccessMessage, FriendRequestAction
+from app.schemas import UserResponse, FriendRequestCreate, LeaderboardResponse, FriendRequestSentResponse, FriendRequestReceivedResponse, SuccessMessage, FriendRequestAction
 from app.api.deps import get_current_user
 from app.api.deps import CurrentUser, SessionDep
 from typing import List, Annotated
 from enum import Enum
+from app.core.bll import calculate_user_level, calculate_user_level_progress
 
 router = APIRouter()
 
@@ -140,3 +141,48 @@ def handle_friend_request(
     db.commit()
 
     return SuccessMessage(message=f"好友請求已{action.Action.lower()}")
+
+@router.get("/leaderboard", response_model=List[LeaderboardResponse])
+def get_leaderboard(
+    current_user: CurrentUser,
+    db: SessionDep,
+    sortBy: str = "level"  # 排序方式，默認為 level
+):
+    # Step 1: 獲取好友列表
+    friends = db.query(User)\
+                .join(FriendList, FriendList.UserID2 == User.UserID)\
+                .filter(FriendList.UserID1 == current_user.UserID)\
+                .all()
+    
+    # 包括當前用戶
+    users = [current_user] + friends
+
+    # Step 2: 計算每位用戶的等級和進度
+    def calculate_user_data(user):
+        total_minutes = user.TotalDetectionTime.hour * 60 + user.TotalDetectionTime.minute
+        level = calculate_user_level(total_minutes)
+        progress = calculate_user_level_progress(total_minutes, level)
+        return {
+            "UserID": user.UserID,
+            "Name": user.UserName,
+            "Rank": 0,  # 稍後排序後再更新
+            "Level": level,
+            "Progress": progress,
+            "AllTimeScore": user.AllTimeScore,
+        }
+
+    leaderboard = [calculate_user_data(user) for user in users]
+
+    # Step 3: 根據排序方式排序
+    if sortBy == "level":
+        leaderboard.sort(key=lambda x: (-x["Level"], -x["Progress"]))
+    elif sortBy == "score":
+        leaderboard.sort(key=lambda x: -x["AllTimeScore"])
+    else:
+        raise HTTPException(status_code=400, detail="Invalid sortBy parameter")
+
+    for idx, user in enumerate(leaderboard, start=1):
+        user["Rank"] = idx
+
+    return leaderboard
+
