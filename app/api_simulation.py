@@ -7,7 +7,8 @@ test_user_datas = [
     {
     "UserName": f"user{x+1}",
     "Email": f"user{x+1}@example.com",
-    "Password": "123123123"
+    "Password": "123123123",
+    "PhotoUrl":"default.png"
     } for x in range(10)
 ]
 

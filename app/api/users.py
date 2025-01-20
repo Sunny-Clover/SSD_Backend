@@ -14,7 +14,7 @@ from typing import Annotated
 
 router = APIRouter()
 
-BASE_IMAGE_DIR = Path("images").resolve()
+BASE_IMAGE_DIR = Path("app/images").resolve()
 BASE_IMAGE_DIR.mkdir(parents=True, exist_ok=True)  # 確保目錄存在
 
 @router.post("/", response_model=ExtendedUserResponse)
@@ -105,8 +105,13 @@ def upload_photo(current_user: CurrentUser, file: UploadFile, db: SessionDep):
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Invalid file type, only images are allowed")
 
+    # 提取副檔名
+    file_extension = Path(file.filename).suffix
+    if not file_extension:
+        raise HTTPException(status_code=400, detail="File must have an extension")
+
     # 生成照片檔名
-    photo_filename = f"avatar_{db_user.UserID}"
+    photo_filename = f"avatar_{db_user.UserID}{file_extension}"
     photo_path = BASE_IMAGE_DIR / photo_filename
 
     # 儲存檔案
@@ -119,10 +124,10 @@ def upload_photo(current_user: CurrentUser, file: UploadFile, db: SessionDep):
 
     return {"message": "Photo uploaded successfully", "filename": photo_filename}
 
-@router.get("/avatar")
-def get_image(current_user: CurrentUser, db: SessionDep):
+@router.get("/avatar/{user_id}")
+def get_image(user_id: int, db: SessionDep):
     # 檢查使用者是否存在
-    db_user = db.query(User).filter(User.UserID == current_user.UserID).first()
+    db_user = db.query(User).filter(User.UserID == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="用戶未找到")
     # 確保傳入的文件名安全

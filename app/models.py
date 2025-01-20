@@ -32,7 +32,7 @@ class UserBase(SQLModel):
     FirstName: Optional[str] = Field(default='', max_length=50)
     LastName: Optional[str] = Field(default='', max_length=50)
     Gender: Optional[GenderEnum] = Field(default=GenderEnum.Other)
-    PhotoUrl: Optional[str] = Field(default='', max_length=255)
+    PhotoUrl: Optional[str] = Field(default='default.png', max_length=255)
     PostureAlertEnable: Optional[bool] = Field(default=False)
     PostureAlertTime: Optional[time] = Field(default=time(0, 0, 0))
     IdleAlertEnable: Optional[bool] = Field(default=False)
