@@ -124,7 +124,8 @@ class FriendListResponse(BaseModel):
 
 class LeaderboardResponse(BaseModel):
     UserID: int
-    Name: str
+    UserName: str
+    PhotoUrl: str
     Rank: int
     Level: int
     Progress: float

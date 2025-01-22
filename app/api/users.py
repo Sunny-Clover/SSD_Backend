@@ -9,6 +9,8 @@ from app.api.deps import CurrentUser, SessionDep
 from app.core.bll import calculate_user_level, calculate_user_level_progress, time_to_minutes
 from pathlib import Path
 import shutil
+import uuid
+from datetime import datetime
 
 from typing import Annotated
 
@@ -110,29 +112,35 @@ def upload_photo(current_user: CurrentUser, file: UploadFile, db: SessionDep):
     if not file_extension:
         raise HTTPException(status_code=400, detail="File must have an extension")
 
-    # 生成照片檔名
-    photo_filename = f"avatar_{db_user.UserID}{file_extension}"
-    photo_path = BASE_IMAGE_DIR / photo_filename
+    # 刪除舊的檔案（如果存在）
+    if db_user.PhotoUrl:
+        old_photo_path = BASE_IMAGE_DIR / db_user.PhotoUrl
+        if old_photo_path.exists():
+            old_photo_path.unlink()
 
-    # 儲存檔案
-    with photo_path.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    # 生成亂碼檔名
+    unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+    photo_path = BASE_IMAGE_DIR / unique_filename
+
+    # 儲存新檔案
+    try:
+        with photo_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
 
     # 更新使用者的照片檔名
-    db_user.PhotoUrl = photo_filename
+    db_user.PhotoUrl = unique_filename
     db.commit()
 
-    return {"message": "Photo uploaded successfully", "filename": photo_filename}
+    return {"message": "Photo uploaded successfully", "filename": unique_filename}
 
-@router.get("/avatar/{user_id}")
-def get_image(user_id: int, db: SessionDep):
-    # 檢查使用者是否存在
-    db_user = db.query(User).filter(User.UserID == user_id).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="用戶未找到")
+
+@router.get("/avatar/{photo_url}")
+def get_image(photo_url: str, db: SessionDep):
     # 確保傳入的文件名安全
     try:
-        sanitized_path = Path(db_user.PhotoUrl).name  # 僅保留檔名，移除路徑
+        sanitized_path = Path(photo_url).name  # 僅保留檔名，移除路徑
         image_path = BASE_IMAGE_DIR / sanitized_path
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid image name")

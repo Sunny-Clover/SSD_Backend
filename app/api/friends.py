@@ -164,7 +164,8 @@ def get_leaderboard(
         progress = calculate_user_level_progress(total_minutes, level)
         return {
             "UserID": user.UserID,
-            "Name": user.UserName,
+            "UserName": user.UserName,
+            "PhotoUrl": user.PhotoUrl,
             "Rank": 0,  # 稍後排序後再更新
             "Level": level,
             "Progress": progress,
