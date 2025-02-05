@@ -3,6 +3,7 @@ import site
 sys.path.extend(site.getsitepackages())
 from sqlmodel import SQLModel
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.config import DATABASE_URL
@@ -13,6 +14,19 @@ import json
 
 # 初始化 FastAPI 應用
 app = FastAPI()
+# 設定允許的來源，設定為前端的URL
+origins = [
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,        # 允許的來源
+    allow_credentials=True,
+    allow_methods=["*"],          # 允許所有 HTTP 方法
+    allow_headers=["*"],          # 允許所有標頭
+)
+
 # 用來儲存每位使用者的連線，格式：{username: {"phone": ws1, "viewer": ws2}}
 connections = {}
 
