@@ -195,6 +195,6 @@ if __name__ == "__main__":
     for idx, user_data in enumerate(test_user_datas):
         create_friend_request(token=tokens[idx], receiverId=1)
 
-    print("\nAccept friend request to user0(id=0) ...")
-    accept_friend_request(token=tokens[0])
+    # print("\nAccept friend request to user0(id=0) ...")
+    # accept_friend_request(token=tokens[0])
     

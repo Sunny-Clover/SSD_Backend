@@ -74,10 +74,13 @@ def get_received_friend_requests(
         FriendRequest.RequestID,
         FriendRequest.SenderID,
         User.UserName.label("SenderUserName"),
-        FriendRequest.Status,
+        User.PhotoUrl,
         FriendRequest.RequestDate
     ).join(User, User.UserID == FriendRequest.SenderID)\
-     .filter(FriendRequest.ReceiverID == current_user.UserID)\
+     .filter(
+        FriendRequest.ReceiverID == current_user.UserID,
+        FriendRequest.Status == StatusEnum.Pending
+    ).order_by(FriendRequest.RequestDate.desc())\
      .all()
     
     return received_requests
@@ -130,7 +133,7 @@ def handle_friend_request(
         # 加到好友清單
         db.add(FriendList(UserID1=current_user.UserID, UserID2=friend_request.SenderID))
         db.add(FriendList(UserID1=friend_request.SenderID, UserID2=current_user.UserID))
-    elif action.Action == "Reject":
+    elif action.Action == "Decline":
         friend_request.Status = "Declined"
     else:
         raise HTTPException(

@@ -83,7 +83,7 @@ class FriendRequestReceivedResponse(BaseModel):
     RequestID: int
     SenderID: int
     SenderUserName: str
-    Status: StatusEnum
+    PhotoUrl: str
     RequestDate: datetime
 
     class Config:
@@ -103,7 +103,7 @@ class FriendRequestResponse(BaseModel):
 
 class RequestAction(str, Enum):
     Accept = 'Accept'
-    Reject = 'Reject'
+    Reject = 'Decline'
 
 class FriendRequestAction(BaseModel):
     Action: RequestAction  # 指定 
