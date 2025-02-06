@@ -48,6 +48,13 @@ class ExtendedUserResponse(UserResponse):
     Level: int
     LevelProgress: float
 
+class UserSearchResponse(BaseModel):
+    UserID: int
+    UserName: str
+    PhotoUrl: str
+    RequestState: Optional[str]
+    IsFriend: bool
+
 # 密碼更新模型
 class PasswordUpdate(BaseModel):
     current_password: str

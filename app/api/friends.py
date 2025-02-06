@@ -130,9 +130,22 @@ def handle_friend_request(
     # 2. 根據動作執行對應操作
     if action.Action == "Accept":
         friend_request.Status = "Accepted"
-        # 加到好友清單
-        db.add(FriendList(UserID1=current_user.UserID, UserID2=friend_request.SenderID))
-        db.add(FriendList(UserID1=friend_request.SenderID, UserID2=current_user.UserID))
+        
+        # 檢查是否已在好友清單中，如果不存在才新增
+        existing_friend1 = db.query(FriendList).filter(
+            FriendList.UserID1 == current_user.UserID,
+            FriendList.UserID2 == friend_request.SenderID
+        ).first()
+        existing_friend2 = db.query(FriendList).filter(
+            FriendList.UserID1 == friend_request.SenderID,
+            FriendList.UserID2 == current_user.UserID
+        ).first()
+
+        if not existing_friend1:
+            db.add(FriendList(UserID1=current_user.UserID, UserID2=friend_request.SenderID))
+        if not existing_friend2:
+            db.add(FriendList(UserID1=friend_request.SenderID, UserID2=current_user.UserID))
+        
     elif action.Action == "Decline":
         friend_request.Status = "Declined"
     else:

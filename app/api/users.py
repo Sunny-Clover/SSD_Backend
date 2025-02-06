@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, Query
 from fastapi.responses import FileResponse
-from sqlalchemy import func
+from sqlalchemy import func, or_, and_, case
 from sqlalchemy.orm import Session
-from app.models import User
-from app.schemas import UserRegister, UserUpdate, UserResponse, PasswordUpdate, SuccessMessage, ExtendedUserResponse
+from app.models import User, FriendRequest, FriendList
+from app.schemas import UserRegister, UserUpdate, UserResponse, PasswordUpdate, SuccessMessage, ExtendedUserResponse, UserSearchResponse
 from app.core.security import get_password_hash, verify_password
 from app.api.deps import CurrentUser, SessionDep
 from app.core.bll import calculate_user_level, calculate_user_level_progress, time_to_minutes
@@ -12,12 +12,72 @@ import shutil
 import uuid
 from datetime import datetime
 
-from typing import Annotated
+from typing import List, Annotated
 
 router = APIRouter()
 
 BASE_IMAGE_DIR = Path("app/images").resolve()
 BASE_IMAGE_DIR.mkdir(parents=True, exist_ok=True)  # 確保目錄存在
+
+@router.get("/search", response_model=List[UserSearchResponse])
+def search_users(
+    q: Annotated[str, Query(..., description="UserName")],
+    current_user: CurrentUser,
+    db: SessionDep
+):
+    """
+    搜尋使用者，同時額外取得兩個欄位：
+      - RequestState：若 FriendRequest 存在則回傳 Status（否則回傳空字串）
+      - IsFriend：若 Friend 表中存在 friend 關係則為 True，否則為 False
+    """
+    query = (
+        db.query(
+            User.UserID,
+            User.UserName,
+            User.PhotoUrl,
+            # 若有 FriendRequest 資料就會取得 Status，否則為 None
+            FriendRequest.Status,
+            # 利用 outer join 判斷 Friend 是否存在：若 Friend.UserID1 不為 None，則為 True
+            case(
+                (FriendList.UserID1 != None, True),
+                else_=False
+            ).label("is_friend")
+        )
+        .outerjoin(
+            FriendRequest,
+            and_(
+                FriendRequest.SenderID == current_user.UserID,
+                FriendRequest.ReceiverID == User.UserID
+            )
+        )
+        .outerjoin(
+            FriendList,
+            and_(
+                FriendList.UserID1 == current_user.UserID,
+                FriendList.UserID2 == User.UserID
+            )
+        )
+        .filter(User.UserName.ilike(f"%{q}%")) 
+        .limit(50)
+    )
+
+    results = query.all()
+
+    output = []
+    for user_id, user_name, photo_url, friend_status, is_friend in results:
+        # 若搜尋到的是目前使用者，本身就不需要 RequestState（可依需求調整）
+        if user_id == current_user.UserID:
+            friend_status = None
+
+        output.append(UserSearchResponse(
+            UserID=user_id,
+            UserName=user_name,
+            PhotoUrl=photo_url,
+            RequestState=friend_status,
+            IsFriend=is_friend
+        ))
+
+    return output
 
 @router.post("/", response_model=ExtendedUserResponse)
 def create_user(user: UserRegister, db: SessionDep):
