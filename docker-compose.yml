@@ -1,4 +1,14 @@
 services:
+  frontend:
+    build: ./frontend
+    container_name: react_web
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://192.168.8.130:8000
+      - VITE_WS_URL=ws://192.168.8.130:8000
+    depends_on:
+      - api
   api:
     build: ./backend
     container_name: fastapi_app

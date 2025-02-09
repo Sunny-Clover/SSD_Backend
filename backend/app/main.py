@@ -16,7 +16,7 @@ import json
 app = FastAPI()
 # 設定允許的來源，設定為前端的URL
 origins = [
-    "http://localhost:3000",
+    "*",
 ]
 
 app.add_middleware(
