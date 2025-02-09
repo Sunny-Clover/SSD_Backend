@@ -1,3 +1,6 @@
+CREATE DATABASE IF NOT EXISTS sitsmartdetector ;
+USE sitsmartdetector;
+
 -- 創建 User 表
 CREATE TABLE IF NOT EXISTS User (
     UserID INT NOT NULL PRIMARY KEY AUTO_INCREMENT,

@@ -16,7 +16,9 @@ from typing import List, Annotated
 
 router = APIRouter()
 
-BASE_IMAGE_DIR = Path("app/images").resolve()
+# 從目前檔案的位置往上三層會到 backend 或 app 目錄
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_IMAGE_DIR = BASE_DIR / "images"
 BASE_IMAGE_DIR.mkdir(parents=True, exist_ok=True)  # 確保目錄存在
 
 @router.get("/search", response_model=List[UserSearchResponse])
@@ -101,7 +103,7 @@ def create_user(user: UserRegister, db: SessionDep):
     db.commit()
     db.refresh(new_user)
     
-    return new_user
+    return get_userDTO(db, new_user)
 
 @router.patch("/me", response_model=ExtendedUserResponse)
 def update_user(user: UserUpdate, current_user: CurrentUser, db: SessionDep):

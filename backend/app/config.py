@@ -1,7 +1,8 @@
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+# 把目錄下.env加入環境變數
+# load_dotenv()
 
 # DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://user:password@localhost/dbname")
 DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://user:password@db:3306/mysql_db")
