@@ -1,0 +1,15 @@
+/* pages/ViewerPage.css */
+
+.viewer-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 80vh; /* 讓容器高度等於視窗高度，可以根據需求調整 */
+}
+
+.viewer-container video {
+  height: 100%; /* 高度佔滿容器 */
+  width: auto;  /* 寬度根據高度自適應 */
+  object-fit: contain; /* 確保視頻維持原比例並自適應 */
+  aspect-ratio: 9 / 16; /* 預設直立模式比例 */
+}

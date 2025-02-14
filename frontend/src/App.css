@@ -1,0 +1,24 @@
+/* App.css */
+
+/* 將整個應用的背景設定為白色 */
+body, html {
+  margin: 0;
+  padding: 0;
+  background-color: #ffffff;
+  font-family: Arial, sans-serif;
+}
+
+/* 讓 App 整體內容置中 */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 設定 Router 內容容器寬度與置中 */
+.content-container {
+  width: 100%;
+  max-width: 800px;  /* 可依需求調整 */
+  margin: 20px auto; /* 上下有點間距，左右自動置中 */
+  padding: 20px;
+}

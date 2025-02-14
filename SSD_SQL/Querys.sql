@@ -5,7 +5,7 @@ SELECT * FROM FriendList;
 SELECT * FROM FriendRequest;
 SELECT * FROM BlockList;
 
-SELECT * FROM Body;
+SELECT * FROM Torso;
 SELECT * FROM Head;
 SELECT * FROM Shoulder;
 SELECT * FROM Neck;

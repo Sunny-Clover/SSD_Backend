@@ -1,18 +1,29 @@
-version: "3.8"
-
 services:
+  frontend:
+    build: ./frontend
+    container_name: react_web
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://192.168.8.130:8000
+      - VITE_WS_URL=ws://192.168.8.130:8000
+    depends_on:
+      - api
   api:
-    build: .
+    build: ./backend
     container_name: fastapi_app
-    command: bash -c 'while !</dev/tcp/db/3306; do sleep 1; done; uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload'
+    # command: bash -c "while !</dev/tcp/db/3306; do sleep 1; done; uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload & while ! curl -s http://localhost:8000/docs > /dev/null; do echo 'Waiting for API...'; sleep 2; done; python /app/app/api_simulation.py && tail -f /dev/null"
+    # command: bash -c 'while !</dev/tcp/db/3306; do sleep 1; done; uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload'
     ports:
       - "8000:8000"
     environment:
       - DATABASE_URL=mysql+pymysql://user:password@db:3306/mysql_db
+      - SECRET_KEY=${SECRET_KEY}
     volumes:
-      - ./app:/app/app # 掛載後端目錄
+      - ./backend/app:/app/app # 掛載後端目錄
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: mysql:8.0
@@ -22,9 +33,12 @@ services:
       MYSQL_USER: user
       MYSQL_PASSWORD: password
       MYSQL_DATABASE: mysql_db
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - ./SSD_SQL/SSDSetup.sql:/docker-entrypoint-initdb.d/SSDSetup.sql  # 初始化資料庫
-      - ./SSD_SQL/InserRecord.sql:/docker-entrypoint-initdb.d/InserRecord.sql  # 初始化SP
+      - ./SSD_SQL/InsertDetection.sql:/docker-entrypoint-initdb.d/InsertDetection.sql  # 初始化SP
       # - ./mysql_data:/var/lib/mysql  # 掛載持久化數據
-    # ports:
-    #   - "3306:3306"

@@ -1,0 +1,30 @@
+/* components/Header.css */
+
+.header {
+  width: 100%;
+  background-color: #B2CEDE; /* 淺灰色背景 */
+  padding: 10px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  /* 新增 flex 排版來讓內部內容水平居中 */
+  display: flex;
+  justify-content: center;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center; /* 垂直居中 */
+}
+
+.header-logo img {
+  width: 60px;
+  height: auto;
+}
+
+.header-text {
+  color: white;
+  font-size: 24px;
+  margin-left: 12px;
+  display: flex;
+  align-items: center;
+}

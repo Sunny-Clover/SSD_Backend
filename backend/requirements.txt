@@ -1,0 +1,17 @@
+fastapi
+websockets
+uvicorn
+sqlmodel
+pymysql
+pydantic
+python-multipart
+email-validator
+bcrypt
+python-jose
+python-dotenv
+cryptography
+pytest
+pytest-cov
+pytest-asyncio
+httpx
+requests

@@ -32,3 +32,6 @@ archive.zip
 
 # permanent db data
 mysql_data
+
+# image folder
+app/images
