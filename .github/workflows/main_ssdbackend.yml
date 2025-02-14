@@ -32,7 +32,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f backend/Dockerfile -t fastapi_app .
+          docker build -f backend/Dockerfile -t fastapi_app ./backend
 
       - name: Save Docker image as artifact
         run: |
