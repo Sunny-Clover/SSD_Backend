@@ -12,7 +12,7 @@ services:
   api:
     build: ./backend
     container_name: fastapi_app
-    command: bash -c "while !</dev/tcp/db/3306; do sleep 1; done; uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload & while ! curl -s http://localhost:8000/docs > /dev/null; do echo 'Waiting for API...'; sleep 2; done; python /app/app/api_simulation.py && tail -f /dev/null"
+    # command: bash -c "while !</dev/tcp/db/3306; do sleep 1; done; uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload & while ! curl -s http://localhost:8000/docs > /dev/null; do echo 'Waiting for API...'; sleep 2; done; python /app/app/api_simulation.py && tail -f /dev/null"
     # command: bash -c 'while !</dev/tcp/db/3306; do sleep 1; done; uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload'
     ports:
       - "8000:8000"
