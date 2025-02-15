@@ -15,5 +15,7 @@ COPY certs/DigiCertGlobalRootCA.crt.pem /etc/ssl/certs/DigiCertGlobalRootCA.crt.
 # 複製專案程式碼
 COPY . .
 
+EXPOSE 8000
+
 # 指定啟動指令
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
