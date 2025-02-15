@@ -56,6 +56,8 @@ jobs:
         resourceGroup: ${{ env.RESOURCE_GROUP }}
         containerAppName: ${{ env.CONTAINER_APP_NAME }}
         environmentVariables: |
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          SECRET_KEY=${{ secrets.SECRET_KEY}}
           FASTAPI_ENVIRONMENT=Development
 
     # 6. 可選：發送成功消息

@@ -30,6 +30,8 @@ app.add_middleware(
 # 用來儲存每位使用者的連線，格式：{username: {"phone": ws1, "viewer": ws2}}
 connections = {}
 
+
+print(DATABASE_URL)
 # 資料庫設定(連線設定)
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
