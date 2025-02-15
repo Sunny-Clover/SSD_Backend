@@ -17,6 +17,7 @@ const LoginPage: React.FC = () => {
     try {
       // 實際呼叫後端 API
       const apiUrl = import.meta.env.VITE_API_URL;
+      console.log(apiUrl)
       const response = await fetch(`${apiUrl}/auth/token`, {
         method: 'POST',
         headers: {
