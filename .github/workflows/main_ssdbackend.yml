@@ -34,7 +34,7 @@ jobs:
         context: ./backend  # 設定 Dockerfile 路徑所在的目錄
         file: ./backend/Dockerfile  # 指定 Dockerfile 路徑
         push: true  # 自動推送到 ACR
-        tags: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_APP_NAME }  # 設定推送的映像名稱
+        tags: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_APP_NAME }}  # 設定推送的映像名稱
 
     # - name: Build and push frontend Docker image to ACR
     #   uses: docker/build-push-action@v6
