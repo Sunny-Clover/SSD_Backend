@@ -47,9 +47,7 @@ jobs:
     - name: Login to Azure
       uses: azure/login@v2
       with:
-        client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E93B4FB1FDD84D18A37865F21754D8CF }}
-        tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4FF0A3CAC74D4A21B1061D0AB790EF21 }}
-        subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_3C9888101D48473BA22E018692E33FF2 }}
+        creds: ${{ secrets.AZURE_CREDENTIALS}}
     
     - name: Deploy to Azure Container Apps
       uses: azure/container-apps-deploy-action@v1
